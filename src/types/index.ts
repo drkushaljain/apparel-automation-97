@@ -2,6 +2,18 @@
 // User roles
 export type UserRole = "admin" | "manager" | "employee";
 
+// User permissions
+export interface UserPermissions {
+  canViewDashboard: boolean;
+  canManageProducts: boolean;
+  canManageOrders: boolean;
+  canManageCustomers: boolean;
+  canManageUsers: boolean;
+  canExportData: boolean;
+  canSendMarketing: boolean;
+  canViewReports: boolean;
+}
+
 // User
 export interface User {
   id: string;
@@ -12,6 +24,8 @@ export interface User {
   updatedAt: Date;
   lastLogin?: Date;
   active: boolean;
+  phone?: string;
+  permissions: UserPermissions;
 }
 
 // Product
@@ -143,4 +157,24 @@ export interface SalesStats {
   dispatchedOrders: number;
   deliveredOrders: number;
   dailySales: { date: string; orders: number; revenue: number }[];
+}
+
+// Company Settings
+export interface CompanySettings {
+  name: string;
+  logo?: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  website?: string;
+  taxId?: string;
+  socialMedia?: {
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+    linkedin?: string;
+  };
 }

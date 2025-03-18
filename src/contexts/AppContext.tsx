@@ -1,9 +1,9 @@
-
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { Customer, Order, OrderStatus, Product, User } from '@/types';
+import { Customer, Order, OrderStatus, Product, User, CompanySettings } from '@/types';
 import { generateMockOrders, mockCustomers, mockProducts, mockUsers } from '@/data/mockData';
 import { toast } from 'sonner';
 import * as dbService from '@/services/dbService';
+import { format } from 'date-fns';
 
 interface AppState {
   products: Product[];
@@ -11,6 +11,7 @@ interface AppState {
   orders: Order[];
   users: User[];
   currentUser: User | null;
+  companySettings: CompanySettings | null;
   isLoading: boolean;
 }
 
@@ -18,15 +19,22 @@ type AppAction =
   | { type: 'SET_PRODUCTS'; payload: Product[] }
   | { type: 'ADD_PRODUCT'; payload: Product }
   | { type: 'UPDATE_PRODUCT'; payload: Product }
+  | { type: 'DELETE_PRODUCT'; payload: string }
   | { type: 'SET_CUSTOMERS'; payload: Customer[] }
   | { type: 'ADD_CUSTOMER'; payload: Customer }
   | { type: 'UPDATE_CUSTOMER'; payload: Customer }
+  | { type: 'DELETE_CUSTOMER'; payload: string }
   | { type: 'SET_ORDERS'; payload: Order[] }
   | { type: 'ADD_ORDER'; payload: Order }
   | { type: 'UPDATE_ORDER'; payload: Order }
+  | { type: 'DELETE_ORDER'; payload: string }
   | { type: 'UPDATE_ORDER_STATUS'; payload: { orderId: string; status: OrderStatus } }
   | { type: 'SET_USERS'; payload: User[] }
+  | { type: 'ADD_USER'; payload: User }
+  | { type: 'UPDATE_USER'; payload: User }
+  | { type: 'DELETE_USER'; payload: string }
   | { type: 'SET_CURRENT_USER'; payload: User | null }
+  | { type: 'SET_COMPANY_SETTINGS'; payload: CompanySettings }
   | { type: 'SET_LOADING'; payload: boolean };
 
 interface AppContextType {
@@ -34,12 +42,21 @@ interface AppContextType {
   dispatch: React.Dispatch<AppAction>;
   addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateProduct: (product: Product) => void;
+  deleteProduct: (productId: string) => void;
   addCustomer: (customer: Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'orders'>) => void;
   updateCustomer: (customer: Customer) => void;
+  deleteCustomer: (customerId: string) => void;
   addOrder: (order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateOrder: (order: Order) => void;
+  deleteOrder: (orderId: string) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  addUser: (user: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateUser: (user: User) => void;
+  deleteUser: (userId: string) => void;
   setCurrentUser: (user: User | null) => void;
+  setCompanySettings: (settings: CompanySettings) => void;
+  logActivity: (action: string, entityType: "order" | "product" | "customer" | "user" | "system", entityId?: string, details?: string) => void;
+  formatDate: (date: Date | string) => string;
 }
 
 const initialState: AppState = {
@@ -48,6 +65,7 @@ const initialState: AppState = {
   orders: [],
   users: [],
   currentUser: null,
+  companySettings: null,
   isLoading: true
 };
 
@@ -64,6 +82,11 @@ const reducer = (state: AppState, action: AppAction): AppState => {
           product.id === action.payload.id ? action.payload : product
         )
       };
+    case 'DELETE_PRODUCT':
+      return {
+        ...state,
+        products: state.products.filter(product => product.id !== action.payload)
+      };
     case 'SET_CUSTOMERS':
       return { ...state, customers: action.payload };
     case 'ADD_CUSTOMER':
@@ -74,6 +97,11 @@ const reducer = (state: AppState, action: AppAction): AppState => {
         customers: state.customers.map(customer => 
           customer.id === action.payload.id ? action.payload : customer
         )
+      };
+    case 'DELETE_CUSTOMER':
+      return {
+        ...state,
+        customers: state.customers.filter(customer => customer.id !== action.payload)
       };
     case 'SET_ORDERS':
       return { ...state, orders: action.payload };
@@ -86,6 +114,11 @@ const reducer = (state: AppState, action: AppAction): AppState => {
           order.id === action.payload.id ? action.payload : order
         )
       };
+    case 'DELETE_ORDER':
+      return {
+        ...state,
+        orders: state.orders.filter(order => order.id !== action.payload)
+      };
     case 'UPDATE_ORDER_STATUS':
       return {
         ...state,
@@ -97,8 +130,24 @@ const reducer = (state: AppState, action: AppAction): AppState => {
       };
     case 'SET_USERS':
       return { ...state, users: action.payload };
+    case 'ADD_USER':
+      return { ...state, users: [...state.users, action.payload] };
+    case 'UPDATE_USER':
+      return {
+        ...state,
+        users: state.users.map(user => 
+          user.id === action.payload.id ? action.payload : user
+        )
+      };
+    case 'DELETE_USER':
+      return {
+        ...state,
+        users: state.users.filter(user => user.id !== action.payload)
+      };
     case 'SET_CURRENT_USER':
       return { ...state, currentUser: action.payload };
+    case 'SET_COMPANY_SETTINGS':
+      return { ...state, companySettings: action.payload };
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
     default:
@@ -130,15 +179,40 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const customers = await dbService.getCustomers();
         const orders = await dbService.getOrders();
         const users = await dbService.getUsers();
+        const companySettings = await dbService.getCompanySettings();
         
         // Update state with loaded data
         dispatch({ type: 'SET_PRODUCTS', payload: products.length ? products : mockProducts });
         dispatch({ type: 'SET_CUSTOMERS', payload: customers.length ? customers : mockCustomers });
         dispatch({ type: 'SET_ORDERS', payload: orders.length ? orders : generateMockOrders() });
-        dispatch({ type: 'SET_USERS', payload: users.length ? users : mockUsers });
         
-        // Set default admin user as current user
-        dispatch({ type: 'SET_CURRENT_USER', payload: users[0] || mockUsers[0] });
+        // Initialize user permissions for existing users if they don't have them
+        const updatedUsers = (users.length ? users : mockUsers).map(user => {
+          if (!user.permissions) {
+            return {
+              ...user,
+              active: user.active !== undefined ? user.active : true,
+              permissions: {
+                canViewDashboard: user.role === "admin",
+                canManageProducts: user.role !== "employee",
+                canManageOrders: true,
+                canManageCustomers: true,
+                canManageUsers: user.role === "admin",
+                canExportData: user.role !== "employee",
+                canSendMarketing: user.role !== "employee",
+                canViewReports: user.role !== "employee",
+              }
+            };
+          }
+          return user;
+        });
+        
+        dispatch({ type: 'SET_USERS', payload: updatedUsers });
+        dispatch({ type: 'SET_CURRENT_USER', payload: updatedUsers[0] });
+        
+        if (companySettings) {
+          dispatch({ type: 'SET_COMPANY_SETTINGS', payload: companySettings });
+        }
       } catch (error) {
         console.error("Error loading data:", error);
         toast.error("Failed to load data from the database");
@@ -147,8 +221,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         dispatch({ type: 'SET_PRODUCTS', payload: mockProducts });
         dispatch({ type: 'SET_CUSTOMERS', payload: mockCustomers });
         dispatch({ type: 'SET_ORDERS', payload: generateMockOrders() });
-        dispatch({ type: 'SET_USERS', payload: mockUsers });
-        dispatch({ type: 'SET_CURRENT_USER', payload: mockUsers[0] });
+        
+        const updatedMockUsers = mockUsers.map(user => ({
+          ...user,
+          active: true,
+          permissions: {
+            canViewDashboard: user.role === "admin",
+            canManageProducts: user.role !== "employee",
+            canManageOrders: true,
+            canManageCustomers: true,
+            canManageUsers: user.role === "admin",
+            canExportData: user.role !== "employee",
+            canSendMarketing: user.role !== "employee",
+            canViewReports: user.role !== "employee",
+          }
+        }));
+        
+        dispatch({ type: 'SET_USERS', payload: updatedMockUsers });
+        dispatch({ type: 'SET_CURRENT_USER', payload: updatedMockUsers[0] });
       } finally {
         dispatch({ type: 'SET_LOADING', payload: false });
       }
@@ -164,8 +254,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       dbService.saveCustomers(state.customers);
       dbService.saveOrders(state.orders);
       dbService.saveUsers(state.users);
+      
+      if (state.companySettings) {
+        dbService.saveCompanySettings(state.companySettings);
+      }
     }
-  }, [state.products, state.customers, state.orders, state.users, state.isLoading]);
+  }, [state.products, state.customers, state.orders, state.users, state.companySettings, state.isLoading]);
 
   const addProduct = (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newProduct: Product = {
@@ -239,8 +333,105 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     toast.success(`Order status updated to ${status}`);
   };
 
-  const setCurrentUser = (user: User | null) => {
-    dispatch({ type: 'SET_CURRENT_USER', payload: user });
+  const addUser = (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newUser: User = {
+      ...userData,
+      id: `u${state.users.length + 1}`,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    dispatch({ type: 'ADD_USER', payload: newUser });
+    logActivity('user_created', 'user', newUser.id, `New user ${newUser.name} created`);
+    toast.success('User added successfully');
+  };
+
+  const updateUser = (user: User) => {
+    const updatedUser = {
+      ...user,
+      updatedAt: new Date()
+    };
+    
+    dispatch({ type: 'UPDATE_USER', payload: updatedUser });
+    logActivity('user_updated', 'user', user.id, `User ${user.name} updated`);
+    toast.success('User updated successfully');
+  };
+
+  const deleteUser = (userId: string) => {
+    // Don't delete the current user
+    if (state.currentUser?.id === userId) {
+      toast.error("You cannot delete your own account");
+      return;
+    }
+    
+    const user = state.users.find(u => u.id === userId);
+    if (user) {
+      dispatch({ type: 'DELETE_USER', payload: userId });
+      logActivity('user_deleted', 'user', userId, `User ${user.name} deleted`);
+      toast.success('User deleted successfully');
+    }
+  };
+
+  const deleteProduct = (productId: string) => {
+    const product = state.products.find(p => p.id === productId);
+    if (product) {
+      dispatch({ type: 'DELETE_PRODUCT', payload: productId });
+      logActivity('product_deleted', 'product', productId, `Product ${product.name} deleted`);
+      toast.success('Product deleted successfully');
+    }
+  };
+
+  const deleteCustomer = (customerId: string) => {
+    const customer = state.customers.find(c => c.id === customerId);
+    if (customer) {
+      dispatch({ type: 'DELETE_CUSTOMER', payload: customerId });
+      logActivity('customer_deleted', 'customer', customerId, `Customer ${customer.name} deleted`);
+      toast.success('Customer deleted successfully');
+    }
+  };
+
+  const deleteOrder = (orderId: string) => {
+    dispatch({ type: 'DELETE_ORDER', payload: orderId });
+    logActivity('order_deleted', 'order', orderId, `Order #${orderId} deleted`);
+    toast.success('Order deleted successfully');
+  };
+
+  const setCompanySettings = (settings: CompanySettings) => {
+    dispatch({ type: 'SET_COMPANY_SETTINGS', payload: settings });
+    toast.success('Company settings updated successfully');
+  };
+
+  const logActivity = (action: string, entityType: "order" | "product" | "customer" | "user" | "system", entityId?: string, details?: string) => {
+    if (!state.currentUser) return;
+    
+    const activityLog = {
+      id: `log${Date.now()}`,
+      userId: state.currentUser.id,
+      userName: state.currentUser.name,
+      action,
+      entityType,
+      entityId,
+      details,
+      timestamp: new Date()
+    };
+    
+    // Save to local storage
+    const logs = JSON.parse(localStorage.getItem('activity_logs') || '[]');
+    logs.push(activityLog);
+    localStorage.setItem('activity_logs', JSON.stringify(logs));
+  };
+
+  const formatDate = (date: Date | string) => {
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      if (isNaN(dateObj.getTime())) {
+        return 'Invalid Date';
+      }
+      return format(dateObj, 'dd MMM yyyy, hh:mm a');
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return 'Invalid Date';
+    }
   };
 
   const contextValue: AppContextType = {
@@ -248,12 +439,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     dispatch,
     addProduct,
     updateProduct,
+    deleteProduct,
     addCustomer,
     updateCustomer,
+    deleteCustomer,
     addOrder,
     updateOrder,
+    deleteOrder,
     updateOrderStatus,
-    setCurrentUser
+    addUser,
+    updateUser,
+    deleteUser,
+    setCurrentUser,
+    setCompanySettings,
+    logActivity,
+    formatDate
   };
 
   return (

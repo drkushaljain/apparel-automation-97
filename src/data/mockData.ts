@@ -1,5 +1,5 @@
 
-import { Customer, Order, OrderItem, OrderStatus, Product, SalesStats, User } from "@/types";
+import { Customer, Order, OrderItem, OrderStatus, Product, SalesStats, User, UserRole } from "@/types";
 
 // Mock Products
 export const mockProducts: Product[] = [
@@ -170,7 +170,8 @@ export const generateMockOrders = (): Order[] => {
       trackingUrl: "https://example.com/track/TRACK123456",
       dispatchImage: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
       createdAt: new Date("2023-05-01"),
-      updatedAt: new Date("2023-05-05")
+      updatedAt: new Date("2023-05-05"),
+      createdBy: "u1" // Admin user
     },
     {
       id: "o2",
@@ -199,7 +200,8 @@ export const generateMockOrders = (): Order[] => {
       trackingUrl: "https://example.com/track/TRACK654321",
       dispatchImage: "https://images.unsplash.com/photo-1573521193826-58c7dc2e13e3?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
       createdAt: new Date("2023-05-10"),
-      updatedAt: new Date("2023-05-12")
+      updatedAt: new Date("2023-05-12"),
+      createdBy: "u2" // Manager user
     },
     {
       id: "o3",
@@ -218,7 +220,8 @@ export const generateMockOrders = (): Order[] => {
       transactionId: "TXN567891234",
       status: 'confirmed',
       createdAt: new Date("2023-05-15"),
-      updatedAt: new Date("2023-05-15")
+      updatedAt: new Date("2023-05-15"),
+      createdBy: "u3" // Employee user
     },
     {
       id: "o4",
@@ -244,7 +247,8 @@ export const generateMockOrders = (): Order[] => {
       transactionId: "TXN345678912",
       status: 'packed',
       createdAt: new Date("2023-05-18"),
-      updatedAt: new Date("2023-05-19")
+      updatedAt: new Date("2023-05-19"),
+      createdBy: "u1" // Admin user
     },
     {
       id: "o5",
@@ -262,21 +266,34 @@ export const generateMockOrders = (): Order[] => {
       totalAmount: 2598, // 2 slim fit jeans
       status: 'pending',
       createdAt: new Date("2023-05-20"),
-      updatedAt: new Date("2023-05-20")
+      updatedAt: new Date("2023-05-20"),
+      createdBy: "u2" // Manager user
     }
   ];
 };
 
 export const mockOrders = generateMockOrders();
 
-// Update customer orders - Fix type error (string[] vs Order[])
+// Update customer orders with order IDs only, not the full orders
 mockCustomers.forEach(customer => {
   customer.orders = mockOrders
     .filter(order => order.customerId === customer.id)
-    .map(order => order.id); // Just store order IDs, not the full orders
+    .map(order => order.id);
 });
 
-// Mock Users - Add missing active property and fix role
+// Default permissions for different roles
+const getDefaultPermissions = (role: UserRole) => ({
+  canViewDashboard: role === "admin",
+  canManageProducts: role !== "employee",
+  canManageOrders: true,
+  canManageCustomers: true,
+  canManageUsers: role === "admin",
+  canExportData: role !== "employee",
+  canSendMarketing: role !== "employee",
+  canViewReports: role !== "employee",
+});
+
+// Mock Users with correct types and permissions
 export const mockUsers: User[] = [
   {
     id: "u1",
@@ -285,7 +302,8 @@ export const mockUsers: User[] = [
     role: "admin",
     createdAt: new Date("2022-12-01"),
     updatedAt: new Date("2022-12-01"),
-    active: true
+    active: true,
+    permissions: getDefaultPermissions("admin")
   },
   {
     id: "u2",
@@ -294,16 +312,18 @@ export const mockUsers: User[] = [
     role: "manager",
     createdAt: new Date("2023-01-15"),
     updatedAt: new Date("2023-01-15"),
-    active: true
+    active: true,
+    permissions: getDefaultPermissions("manager")
   },
   {
     id: "u3",
     name: "Staff User",
     email: "staff@example.com",
-    role: "employee", // Changed from "staff" to "employee" to match UserRole type
+    role: "employee", // Employee role (corrected from "staff")
     createdAt: new Date("2023-02-10"),
     updatedAt: new Date("2023-02-10"),
-    active: true
+    active: true,
+    permissions: getDefaultPermissions("employee")
   }
 ];
 
