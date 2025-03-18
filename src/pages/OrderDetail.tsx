@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
@@ -14,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrderStatus } from "@/types";
 import { ArrowLeft, Edit, Truck, FileText, MessageSquare, Package, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
+import { Label } from "@/components/ui/label";
 
 const OrderDetail = () => {
   const { id } = useParams<{ id: string }>();

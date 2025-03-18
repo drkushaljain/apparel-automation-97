@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Order } from "@/types";
 import { MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import { sendWhatsAppMessage } from "@/utils/whatsAppUtils";
 
 interface WhatsAppButtonProps {
   order: Order;
@@ -30,19 +31,12 @@ const WhatsAppButton = ({
   
   const whatsappMessage = message || defaultMessage;
   
-  const handleSendWhatsApp = () => {
+  const handleSendWhatsApp = async () => {
     try {
-      // Format phone number (remove non-numeric characters)
-      const phone = customer.whatsapp.replace(/\D/g, '');
-      
-      // Create WhatsApp URL
-      const encodedMessage = encodeURIComponent(whatsappMessage);
-      const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
-      
-      // Open WhatsApp in a new tab
-      window.open(whatsappUrl, '_blank');
-      
-      toast.success("WhatsApp message prepared");
+      const sent = await sendWhatsAppMessage(customer, whatsappMessage);
+      if (sent) {
+        toast.success("WhatsApp message prepared");
+      }
     } catch (error) {
       console.error("Error opening WhatsApp:", error);
       toast.error("Failed to open WhatsApp");

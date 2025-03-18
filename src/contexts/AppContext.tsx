@@ -3,6 +3,7 @@ import React, { createContext, useContext, useReducer, useEffect, ReactNode } fr
 import { Customer, Order, OrderStatus, Product, User } from '@/types';
 import { generateMockOrders, mockCustomers, mockProducts, mockUsers } from '@/data/mockData';
 import { toast } from 'sonner';
+import * as dbService from '@/services/dbService';
 
 interface AppState {
   products: Product[];
@@ -110,24 +111,61 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  // Initialize with mock data
+  // Initialize database and load data
   useEffect(() => {
     const loadData = async () => {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      dispatch({ type: 'SET_LOADING', payload: true });
       
-      dispatch({ type: 'SET_PRODUCTS', payload: mockProducts });
-      dispatch({ type: 'SET_CUSTOMERS', payload: mockCustomers });
-      dispatch({ type: 'SET_ORDERS', payload: generateMockOrders() });
-      dispatch({ type: 'SET_USERS', payload: mockUsers });
-      
-      // Set default admin user as current user
-      dispatch({ type: 'SET_CURRENT_USER', payload: mockUsers[0] });
-      dispatch({ type: 'SET_LOADING', payload: false });
+      try {
+        // Initialize database with mock data if it's empty
+        dbService.initializeDatabase(
+          mockProducts,
+          mockCustomers,
+          generateMockOrders(),
+          mockUsers
+        );
+        
+        // Load data from database (localStorage in this mock implementation)
+        const products = await dbService.getProducts();
+        const customers = await dbService.getCustomers();
+        const orders = await dbService.getOrders();
+        const users = await dbService.getUsers();
+        
+        // Update state with loaded data
+        dispatch({ type: 'SET_PRODUCTS', payload: products.length ? products : mockProducts });
+        dispatch({ type: 'SET_CUSTOMERS', payload: customers.length ? customers : mockCustomers });
+        dispatch({ type: 'SET_ORDERS', payload: orders.length ? orders : generateMockOrders() });
+        dispatch({ type: 'SET_USERS', payload: users.length ? users : mockUsers });
+        
+        // Set default admin user as current user
+        dispatch({ type: 'SET_CURRENT_USER', payload: users[0] || mockUsers[0] });
+      } catch (error) {
+        console.error("Error loading data:", error);
+        toast.error("Failed to load data from the database");
+        
+        // Fallback to mock data on error
+        dispatch({ type: 'SET_PRODUCTS', payload: mockProducts });
+        dispatch({ type: 'SET_CUSTOMERS', payload: mockCustomers });
+        dispatch({ type: 'SET_ORDERS', payload: generateMockOrders() });
+        dispatch({ type: 'SET_USERS', payload: mockUsers });
+        dispatch({ type: 'SET_CURRENT_USER', payload: mockUsers[0] });
+      } finally {
+        dispatch({ type: 'SET_LOADING', payload: false });
+      }
     };
     
     loadData();
   }, []);
+  
+  // Save state changes to database
+  useEffect(() => {
+    if (!state.isLoading) {
+      dbService.saveProducts(state.products);
+      dbService.saveCustomers(state.customers);
+      dbService.saveOrders(state.orders);
+      dbService.saveUsers(state.users);
+    }
+  }, [state.products, state.customers, state.orders, state.users, state.isLoading]);
 
   const addProduct = (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newProduct: Product = {
