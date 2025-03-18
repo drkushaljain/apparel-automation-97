@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { useAppContext } from "@/contexts/AppContext";
@@ -10,9 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Building, Save, Upload } from "lucide-react";
 import { CompanySettings as CompanySettingsType } from "@/types";
+import * as dbService from "@/services/dbService";
 
 const CompanySettings = () => {
-  const { state, dispatch } = useAppContext();
+  const { state, setCompanySettings } = useAppContext();
   const { currentUser } = state;
   
   const [settings, setSettings] = useState<CompanySettingsType>({
@@ -38,20 +38,24 @@ const CompanySettings = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Load company settings from localStorage
-    const savedSettings = localStorage.getItem('company_settings');
-    if (savedSettings) {
+    // Load company settings from database service
+    const loadCompanySettings = async () => {
       try {
-        const parsedSettings = JSON.parse(savedSettings);
-        setSettings(parsedSettings);
-        
-        if (parsedSettings.logo) {
-          setLogoPreview(parsedSettings.logo);
+        const savedSettings = await dbService.getCompanySettings();
+        if (savedSettings) {
+          setSettings(savedSettings);
+          
+          if (savedSettings.logo) {
+            setLogoPreview(savedSettings.logo);
+          }
         }
       } catch (error) {
-        console.error("Error parsing company settings:", error);
+        console.error("Error loading company settings:", error);
+        toast.error("Failed to load company settings");
       }
-    }
+    };
+    
+    loadCompanySettings();
   }, []);
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,11 +99,11 @@ const CompanySettings = () => {
         logo: logoUrl
       };
       
-      // Save to localStorage (in a real app this would be to database)
-      localStorage.setItem('company_settings', JSON.stringify(updatedSettings));
+      // Save to database service
+      await dbService.saveCompanySettings(updatedSettings);
       
       // Update application state
-      dispatch({ type: 'SET_COMPANY_SETTINGS', payload: updatedSettings });
+      setCompanySettings(updatedSettings);
       
       toast.success("Company settings saved successfully");
     } catch (error) {

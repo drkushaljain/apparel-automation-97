@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import MainLayout from "@/components/layout/MainLayout";
@@ -16,7 +17,7 @@ import { User as UserType, UserRole, UserPermissions } from "@/types";
 import NoContent from "@/components/NoContent";
 
 const UserManagement = () => {
-  const { state, dispatch } = useAppContext();
+  const { state, addUser, updateUser, deleteUser } = useAppContext();
   const { users, currentUser } = state;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserType | null>(null);
@@ -63,7 +64,7 @@ const UserManagement = () => {
       setEmail(user.email);
       setPhone(user.phone || "");
       setRole(user.role);
-      setActive(user.active);
+      setActive(user.active !== undefined ? user.active : true);
       setPermissions(user.permissions || {
         canViewDashboard: user.role === "admin",
         canManageProducts: user.role !== "employee",
@@ -89,22 +90,18 @@ const UserManagement = () => {
     }
     
     if (!editingUser) {
-      const newUser: UserType = {
-        id: `u${users.length + 1}`,
+      // Add new user
+      addUser({
         name,
         email,
         phone,
         role,
         active,
         permissions,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      
-      dispatch({ type: 'ADD_USER', payload: newUser });
-      toast.success("User added successfully");
+      });
     } else {
-      const updatedUser = {
+      // Update existing user
+      updateUser({
         ...editingUser,
         name,
         email,
@@ -112,11 +109,7 @@ const UserManagement = () => {
         role,
         active,
         permissions,
-        updatedAt: new Date(),
-      };
-      
-      dispatch({ type: 'UPDATE_USER', payload: updatedUser });
-      toast.success("User updated successfully");
+      });
     }
     
     setIsDialogOpen(false);
@@ -125,13 +118,13 @@ const UserManagement = () => {
 
   const handleDeleteUser = (user: UserType) => {
     if (window.confirm(`Are you sure you want to delete ${user.name}?`)) {
-      dispatch({ type: 'DELETE_USER', payload: user.id });
-      toast.success("User deleted successfully");
+      deleteUser(user.id);
     }
   };
 
   const handleRoleChange = (newRole: UserRole) => {
     setRole(newRole);
+    // Update permissions based on role
     setPermissions({
       canViewDashboard: newRole === "admin",
       canManageProducts: newRole !== "employee",
@@ -144,6 +137,7 @@ const UserManagement = () => {
     });
   };
 
+  // Only admin can access this page
   if (currentUser?.role !== "admin") {
     return (
       <MainLayout>
