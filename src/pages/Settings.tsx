@@ -132,7 +132,7 @@ const Settings = () => {
                     rows={4}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Available variables: {{"{{"}}customerName{{"}}"}}, {{"{{"}}orderId{{"}}"}}, {{"{{"}}status{{"}}"}}, {{"{{"}}trackingInfo{{"}}"}}
+                    Available variables: {"{{"} customerName {"}}"},  {"{{"} orderId {"}}"},  {"{{"} status {"}}"},  {"{{"} trackingInfo {"}}"}
                   </p>
                 </div>
               </CardContent>
