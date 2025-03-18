@@ -133,3 +133,14 @@ export interface DashboardStats {
   recentActivity: ActivityLog[];
   salesByDay: SalesData[];
 }
+
+// Sales Statistics
+export interface SalesStats {
+  totalOrders: number;
+  totalRevenue: number;
+  avgOrderValue: number;
+  pendingOrders: number;
+  dispatchedOrders: number;
+  deliveredOrders: number;
+  dailySales: { date: string; orders: number; revenue: number }[];
+}

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -17,6 +16,7 @@ import { CalendarIcon, CheckIcon, SendIcon, AlertCircle, Info } from "lucide-rea
 import { toast } from "sonner";
 import { sendWhatsAppBulkMessage } from "@/utils/whatsAppUtils";
 import { MarketingCampaign } from "@/types";
+import { Badge } from "@/components/ui/badge";
 
 const MarketingCampaigns = () => {
   const navigate = useNavigate();
@@ -36,7 +36,6 @@ const MarketingCampaigns = () => {
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [step, setStep] = useState(1);
   
-  // Get unique categories
   const categories = Array.from(
     new Set(products.map(product => product.category || "Uncategorized"))
   );
@@ -74,12 +73,10 @@ const MarketingCampaigns = () => {
       case "all":
         return customers;
       case "category":
-        // Get product IDs in the selected category
         const productIds = products
           .filter(p => (p.category || "Uncategorized") === targetValue)
           .map(p => p.id);
         
-        // Find customers who have ordered these products
         const customerIds = new Set();
         state.orders.forEach(order => {
           if (order.items.some(item => productIds.includes(item.productId))) {
@@ -115,7 +112,6 @@ const MarketingCampaigns = () => {
     setCampaigns(updatedCampaigns);
     localStorage.setItem('marketing_campaigns', JSON.stringify(updatedCampaigns));
     
-    // Log activity
     if (currentUser?.name) {
       const logs = JSON.parse(localStorage.getItem('activity_logs') || '[]');
       logs.push({
@@ -132,7 +128,6 @@ const MarketingCampaigns = () => {
     
     toast.success(`Campaign ${status === "sent" ? "sent" : "saved"} successfully`);
     
-    // Reset form
     setName("");
     setMessage("");
     setTargetType("all");
@@ -166,8 +161,6 @@ const MarketingCampaigns = () => {
       return;
     }
     
-    // In a real app, we would set up a scheduled task
-    // For now, we'll just save it as scheduled
     saveCampaign("scheduled");
     toast.success(`Campaign scheduled for ${format(date, 'PPP')}`);
   };
@@ -188,7 +181,6 @@ const MarketingCampaigns = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Create Campaign */}
           <div className="md:col-span-2">
             <Card>
               <CardHeader>
@@ -412,7 +404,6 @@ const MarketingCampaigns = () => {
             </Card>
           </div>
 
-          {/* Recent Campaigns */}
           <div className="md:col-span-1">
             <Card>
               <CardHeader>

@@ -11,7 +11,10 @@ export const mockProducts: Product[] = [
     imageUrl: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
     isAvailable: true,
     createdAt: new Date("2023-01-15"),
-    updatedAt: new Date("2023-03-10")
+    updatedAt: new Date("2023-03-10"),
+    stock: 45,
+    sales: 120,
+    category: "Clothing"
   },
   {
     id: "p2",
@@ -21,7 +24,10 @@ export const mockProducts: Product[] = [
     imageUrl: "https://images.unsplash.com/photo-1542272604-787c3835535d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
     isAvailable: true,
     createdAt: new Date("2023-02-18"),
-    updatedAt: new Date("2023-04-05")
+    updatedAt: new Date("2023-04-05"),
+    stock: 28,
+    sales: 75,
+    category: "Clothing"
   },
   {
     id: "p3",
@@ -31,7 +37,10 @@ export const mockProducts: Product[] = [
     imageUrl: "https://images.unsplash.com/photo-1598033129183-c4f50c736f10?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
     isAvailable: false,
     createdAt: new Date("2023-01-25"),
-    updatedAt: new Date("2023-05-12")
+    updatedAt: new Date("2023-05-12"),
+    stock: 0,
+    sales: 60,
+    category: "Clothing"
   },
   {
     id: "p4",
@@ -41,7 +50,10 @@ export const mockProducts: Product[] = [
     imageUrl: "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
     isAvailable: true,
     createdAt: new Date("2023-03-10"),
-    updatedAt: new Date("2023-05-15")
+    updatedAt: new Date("2023-05-15"),
+    stock: 15,
+    sales: 42,
+    category: "Clothing"
   },
   {
     id: "p5",
@@ -51,7 +63,10 @@ export const mockProducts: Product[] = [
     imageUrl: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
     isAvailable: true,
     createdAt: new Date("2023-02-28"),
-    updatedAt: new Date("2023-04-22")
+    updatedAt: new Date("2023-04-22"),
+    stock: 22,
+    sales: 30,
+    category: "Outerwear"
   }
 ];
 
@@ -254,12 +269,14 @@ export const generateMockOrders = (): Order[] => {
 
 export const mockOrders = generateMockOrders();
 
-// Update customer orders
+// Update customer orders - Fix type error (string[] vs Order[])
 mockCustomers.forEach(customer => {
-  customer.orders = mockOrders.filter(order => order.customerId === customer.id);
+  customer.orders = mockOrders
+    .filter(order => order.customerId === customer.id)
+    .map(order => order.id); // Just store order IDs, not the full orders
 });
 
-// Mock Users
+// Mock Users - Add missing active property and fix role
 export const mockUsers: User[] = [
   {
     id: "u1",
@@ -267,7 +284,8 @@ export const mockUsers: User[] = [
     email: "admin@example.com",
     role: "admin",
     createdAt: new Date("2022-12-01"),
-    updatedAt: new Date("2022-12-01")
+    updatedAt: new Date("2022-12-01"),
+    active: true
   },
   {
     id: "u2",
@@ -275,15 +293,17 @@ export const mockUsers: User[] = [
     email: "manager@example.com",
     role: "manager",
     createdAt: new Date("2023-01-15"),
-    updatedAt: new Date("2023-01-15")
+    updatedAt: new Date("2023-01-15"),
+    active: true
   },
   {
     id: "u3",
     name: "Staff User",
     email: "staff@example.com",
-    role: "staff",
+    role: "employee", // Changed from "staff" to "employee" to match UserRole type
     createdAt: new Date("2023-02-10"),
-    updatedAt: new Date("2023-02-10")
+    updatedAt: new Date("2023-02-10"),
+    active: true
   }
 ];
 
