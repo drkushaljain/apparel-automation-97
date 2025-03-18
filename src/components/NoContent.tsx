@@ -9,6 +9,7 @@ interface NoContentProps {
   actionText?: string;
   actionLink?: string;
   icon?: React.ReactNode;
+  onAction?: () => void;
 }
 
 const NoContent: React.FC<NoContentProps> = ({
@@ -17,6 +18,7 @@ const NoContent: React.FC<NoContentProps> = ({
   actionText,
   actionLink,
   icon = <Package className="h-12 w-12 text-primary/20" />,
+  onAction,
 }) => {
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center">
@@ -29,9 +31,16 @@ const NoContent: React.FC<NoContentProps> = ({
           {description}
         </p>
       )}
-      {actionText && actionLink && (
-        <Button asChild>
-          <Link to={actionLink}>{actionText}</Link>
+      {actionText && (actionLink || onAction) && (
+        <Button 
+          asChild={!!actionLink}
+          onClick={onAction}
+        >
+          {actionLink ? (
+            <Link to={actionLink}>{actionText}</Link>
+          ) : (
+            actionText
+          )}
         </Button>
       )}
     </div>

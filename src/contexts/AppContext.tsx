@@ -160,13 +160,11 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  // Initialize database and load data
   useEffect(() => {
     const loadData = async () => {
       dispatch({ type: 'SET_LOADING', payload: true });
       
       try {
-        // Initialize database with mock data if it's empty
         dbService.initializeDatabase(
           mockProducts,
           mockCustomers,
@@ -174,19 +172,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           mockUsers
         );
         
-        // Load data from database (localStorage in this mock implementation)
         const products = await dbService.getProducts();
         const customers = await dbService.getCustomers();
         const orders = await dbService.getOrders();
         const users = await dbService.getUsers();
         const companySettings = await dbService.getCompanySettings();
         
-        // Update state with loaded data
         dispatch({ type: 'SET_PRODUCTS', payload: products.length ? products : mockProducts });
         dispatch({ type: 'SET_CUSTOMERS', payload: customers.length ? customers : mockCustomers });
         dispatch({ type: 'SET_ORDERS', payload: orders.length ? orders : generateMockOrders() });
         
-        // Initialize user permissions for existing users if they don't have them
         const updatedUsers = (users.length ? users : mockUsers).map(user => {
           if (!user.permissions) {
             return {
@@ -217,7 +212,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         console.error("Error loading data:", error);
         toast.error("Failed to load data from the database");
         
-        // Fallback to mock data on error
         dispatch({ type: 'SET_PRODUCTS', payload: mockProducts });
         dispatch({ type: 'SET_CUSTOMERS', payload: mockCustomers });
         dispatch({ type: 'SET_ORDERS', payload: generateMockOrders() });
@@ -247,7 +241,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     loadData();
   }, []);
   
-  // Save state changes to database
   useEffect(() => {
     if (!state.isLoading) {
       dbService.saveProducts(state.products);
@@ -358,7 +351,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const deleteUser = (userId: string) => {
-    // Don't delete the current user
     if (state.currentUser?.id === userId) {
       toast.error("You cannot delete your own account");
       return;
@@ -415,7 +407,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       timestamp: new Date()
     };
     
-    // Save to local storage
     const logs = JSON.parse(localStorage.getItem('activity_logs') || '[]');
     logs.push(activityLog);
     localStorage.setItem('activity_logs', JSON.stringify(logs));
@@ -432,6 +423,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       console.error("Error formatting date:", error);
       return 'Invalid Date';
     }
+  };
+
+  const setCurrentUser = (user: User | null) => {
+    dispatch({ type: 'SET_CURRENT_USER', payload: user });
   };
 
   const contextValue: AppContextType = {

@@ -1,17 +1,16 @@
-
 import { useState } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, UserPlus, Settings, Edit, Trash } from "lucide-react";
+import { User, UserPlus, Edit, Trash } from "lucide-react";
 import { toast } from "sonner";
 import { User as UserType, UserRole, UserPermissions } from "@/types";
 import NoContent from "@/components/NoContent";
@@ -84,14 +83,12 @@ const UserManagement = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form
     if (!name || !email) {
       toast.error("Name and email are required");
       return;
     }
     
     if (!editingUser) {
-      // Add new user
       const newUser: UserType = {
         id: `u${users.length + 1}`,
         name,
@@ -107,7 +104,6 @@ const UserManagement = () => {
       dispatch({ type: 'ADD_USER', payload: newUser });
       toast.success("User added successfully");
     } else {
-      // Update existing user
       const updatedUser = {
         ...editingUser,
         name,
@@ -134,7 +130,6 @@ const UserManagement = () => {
     }
   };
 
-  // Set all permissions for a role
   const handleRoleChange = (newRole: UserRole) => {
     setRole(newRole);
     setPermissions({
@@ -149,7 +144,6 @@ const UserManagement = () => {
     });
   };
 
-  // Only admin can access this page
   if (currentUser?.role !== "admin") {
     return (
       <MainLayout>

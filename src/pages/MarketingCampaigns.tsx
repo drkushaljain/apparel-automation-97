@@ -54,8 +54,12 @@ const MarketingCampaigns = () => {
           ...campaign,
           scheduledDate: campaign.scheduledDate ? new Date(campaign.scheduledDate) : undefined,
           sentDate: campaign.sentDate ? new Date(campaign.sentDate) : undefined,
-          createdAt: new Date(campaign.createdAt)
-        }));
+          createdAt: new Date(campaign.createdAt),
+          // Ensure status is one of the allowed values
+          status: ['draft', 'scheduled', 'sent', 'cancelled'].includes(campaign.status) 
+            ? campaign.status 
+            : 'draft'
+        })) as MarketingCampaign[];
         setCampaigns(fixedCampaigns);
       } catch (error) {
         console.error("Error loading campaigns:", error);
@@ -126,7 +130,7 @@ const MarketingCampaigns = () => {
       toast.success("Campaign created successfully");
     } else {
       // Update existing campaign
-      const updatedCampaign = {
+      const updatedCampaign: MarketingCampaign = {
         ...editingCampaign,
         name,
         message,
@@ -193,7 +197,7 @@ const MarketingCampaigns = () => {
     // Simulate sending to all eligible customers
     setTimeout(() => {
       // Update campaign status
-      const updatedCampaign = {
+      const updatedCampaign: MarketingCampaign = {
         ...campaign,
         status: 'sent',
         sentDate: new Date()
