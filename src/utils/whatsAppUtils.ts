@@ -1,71 +1,75 @@
 
 import { Customer } from "@/types";
-import { toast } from "sonner";
 
-/**
- * Send a WhatsApp message to a single customer
- */
 export const sendWhatsAppMessage = async (
   customer: Customer,
   message: string
 ): Promise<boolean> => {
   try {
-    // Format phone number (remove non-numeric characters)
-    const phone = customer.whatsapp.replace(/\D/g, '');
+    // Replace template variables in message
+    const processedMessage = message
+      .replace(/{{name}}/g, customer.name)
+      .replace(/{{phone}}/g, customer.phone);
     
-    // Replace template variables with actual values
-    const finalMessage = message.replace(/{{customerName}}/g, customer.name);
+    // Format phone number (remove spaces, +, etc)
+    const phone = customer.whatsapp.replace(/\s+/g, "").replace(/^\+/, "");
     
     // Create WhatsApp URL
-    const encodedMessage = encodeURIComponent(finalMessage);
-    const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(processedMessage)}`;
     
     // Open WhatsApp in a new tab
-    window.open(whatsappUrl, '_blank');
+    window.open(url, "_blank");
+    
+    // Log activity
+    const currentUser = JSON.parse(localStorage.getItem('current_user') || '{}');
+    if (currentUser?.name) {
+      const logs = JSON.parse(localStorage.getItem('activity_logs') || '[]');
+      logs.push({
+        id: `log${Date.now()}`,
+        userId: currentUser.id || 'unknown',
+        userName: currentUser.name,
+        action: 'sent_whatsapp',
+        entityType: 'customer',
+        entityId: customer.id,
+        details: `WhatsApp message sent to ${customer.name}`,
+        timestamp: new Date()
+      });
+      localStorage.setItem('activity_logs', JSON.stringify(logs));
+    }
     
     return true;
   } catch (error) {
     console.error("Error sending WhatsApp message:", error);
-    toast.error("Failed to send WhatsApp message");
     return false;
   }
 };
 
-/**
- * Send WhatsApp messages to multiple customers (one after another)
- */
-export const sendBulkWhatsAppMessages = async (
+export const sendWhatsAppBulkMessage = async (
   customers: Customer[],
-  messageTemplate: string,
-  delayBetweenMessages: number = 1000 // Default delay of 1 second
+  message: string
 ): Promise<{ success: number; failed: number }> => {
   let success = 0;
   let failed = 0;
   
-  for (const customer of customers) {
-    try {
-      // Replace template variables with actual values
-      const message = messageTemplate.replace(/{{customerName}}/g, customer.name);
-      
-      // Format phone number (remove non-numeric characters)
-      const phone = customer.whatsapp.replace(/\D/g, '');
-      
-      // Create WhatsApp URL
-      const encodedMessage = encodeURIComponent(message);
-      const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
-      
-      // Open WhatsApp in a new tab
-      window.open(whatsappUrl, '_blank');
-      
-      success++;
-      
-      // Wait before opening the next message
-      if (customers.length > 1) {
-        await new Promise(resolve => setTimeout(resolve, delayBetweenMessages));
+  // Process in small batches to avoid overwhelming the browser
+  const batchSize = 5;
+  const totalBatches = Math.ceil(customers.length / batchSize);
+  
+  for (let i = 0; i < totalBatches; i++) {
+    const batch = customers.slice(i * batchSize, (i + 1) * batchSize);
+    
+    for (const customer of batch) {
+      const sent = await sendWhatsAppMessage(customer, message);
+      if (sent) {
+        success++;
+      } else {
+        failed++;
       }
-    } catch (error) {
-      console.error(`Error sending WhatsApp message to ${customer.name}:`, error);
-      failed++;
+      
+      // Small delay to prevent rate limiting
+      if (batch.length > 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     }
   }
   

@@ -23,7 +23,7 @@ const WhatsAppButton = ({
   const customer = order.customer;
   
   // Default message if not provided
-  const defaultMessage = `Hello ${customer.name}, your order #${order.id} has been confirmed. ${
+  const defaultMessage = `Hello {{name}}, your order #${order.id} has been confirmed. ${
     order.status === 'dispatched' || order.status === 'out-for-delivery' || order.status === 'delivered'
       ? `Tracking ID: ${order.trackingId}. Track your package here: ${order.trackingUrl}`
       : 'We will send you the tracking details soon.'

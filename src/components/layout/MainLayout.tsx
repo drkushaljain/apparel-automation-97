@@ -1,5 +1,5 @@
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,11 +12,13 @@ import {
   Settings,
   X,
   User,
+  MessageSquare,
+  FileText,
 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 import { useAppContext } from "@/contexts/AppContext";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { UserRole } from "@/types";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -29,37 +31,70 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
+  const [userRole, setUserRole] = useState<UserRole>("employee");
+  
+  useEffect(() => {
+    // Get current user from localStorage (this would be set during login in a real app)
+    const storedUser = JSON.parse(localStorage.getItem('current_user') || '{}');
+    if (storedUser && storedUser.role) {
+      setUserRole(storedUser.role as UserRole);
+    } else if (currentUser) {
+      // Use context user as fallback
+      setUserRole(currentUser.role as UserRole);
+      // Store in localStorage
+      localStorage.setItem('current_user', JSON.stringify(currentUser));
+    }
+  }, [currentUser]);
 
   const navigation = [
     {
       name: "Dashboard",
       href: "/",
       icon: BarChart3,
-      current: location.pathname === "/",
+      current: location.pathname === "/" || location.pathname === "/dashboard",
+      roles: ["admin", "manager", "employee"],
     },
     {
       name: "Orders",
       href: "/orders",
       icon: ShoppingBag,
       current: location.pathname.startsWith("/orders"),
+      roles: ["admin", "manager", "employee"],
     },
     {
       name: "Products",
       href: "/products",
       icon: Package,
       current: location.pathname.startsWith("/products"),
+      roles: ["admin", "manager", "employee"],
     },
     {
       name: "Customers",
       href: "/customers",
       icon: Users,
       current: location.pathname.startsWith("/customers"),
+      roles: ["admin", "manager", "employee"],
+    },
+    {
+      name: "Marketing",
+      href: "/marketing",
+      icon: MessageSquare,
+      current: location.pathname.startsWith("/marketing"),
+      roles: ["admin", "manager"],
+    },
+    {
+      name: "Revenue",
+      href: "/revenue",
+      icon: FileText,
+      current: location.pathname.startsWith("/revenue"),
+      roles: ["admin"],
     },
     {
       name: "Settings",
       href: "/settings",
       icon: Settings,
       current: location.pathname.startsWith("/settings"),
+      roles: ["admin", "manager"],
     },
   ];
 
@@ -111,7 +146,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{currentUser.name}</p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}
+                  {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
                 </p>
               </div>
             </div>
@@ -119,23 +154,25 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
           {/* Navigation */}
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-            {navigation.map((item) => (
-              <Button
-                key={item.name}
-                variant={item.current ? "secondary" : "ghost"}
-                className={cn(
-                  "w-full justify-start text-sm h-10 mb-1",
-                  item.current ? "bg-secondary" : "hover:bg-secondary/50"
-                )}
-                onClick={() => {
-                  navigate(item.href);
-                  if (isMobile) setSidebarOpen(false);
-                }}
-              >
-                <item.icon className="mr-3 h-4 w-4" />
-                {item.name}
-              </Button>
-            ))}
+            {navigation
+              .filter(item => item.roles.includes(userRole)) // Filter navigation items by user role
+              .map((item) => (
+                <Button
+                  key={item.name}
+                  variant={item.current ? "secondary" : "ghost"}
+                  className={cn(
+                    "w-full justify-start text-sm h-10 mb-1",
+                    item.current ? "bg-secondary" : "hover:bg-secondary/50"
+                  )}
+                  onClick={() => {
+                    navigate(item.href);
+                    if (isMobile) setSidebarOpen(false);
+                  }}
+                >
+                  <item.icon className="mr-3 h-4 w-4" />
+                  {item.name}
+                </Button>
+              ))}
           </nav>
 
           {/* Logout section */}

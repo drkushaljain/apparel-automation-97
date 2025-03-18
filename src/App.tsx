@@ -16,8 +16,11 @@ import EditOrder from "./pages/EditOrder";
 import Customers from "./pages/Customers";
 import NewCustomer from "./pages/NewCustomer";
 import Products from "./pages/Products";
+import ProductDetail from "./pages/ProductDetail";
 import NewProduct from "./pages/NewProduct";
 import Settings from "./pages/Settings";
+import MarketingCampaigns from "./pages/MarketingCampaigns";
+import RevenueReport from "./pages/RevenueReport";
 
 const queryClient = new QueryClient();
 
@@ -39,8 +42,11 @@ const App = () => (
             <Route path="/customers" element={<Customers />} />
             <Route path="/customers/new" element={<NewCustomer />} />
             <Route path="/products" element={<Products />} />
+            <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/products/new" element={<NewProduct />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/marketing" element={<MarketingCampaigns />} />
+            <Route path="/revenue" element={<RevenueReport />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -18,25 +18,68 @@ const DeliverySlip = ({ order }: DeliverySlipProps) => {
       const content = printRef.current;
       if (!content) return;
       
-      const originalDisplay = document.body.style.display;
-      const originalOverflow = document.body.style.overflow;
+      // Create a new window for printing
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast.error("Unable to open print window. Please check your popup blocker settings.");
+        return;
+      }
       
-      // Hide everything else except the print content
-      document.body.style.display = 'none';
+      // Add necessary styles
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Delivery Slip - Order #${order.id}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+              .slip-container { max-width: 400px; margin: 0 auto; border: 2px solid #000; padding: 16px; }
+              .text-center { text-align: center; }
+              .border-b { border-bottom: 1px solid #ddd; padding-bottom: 12px; margin-bottom: 12px; }
+              .space-y-1 > * { margin-bottom: 8px; }
+              .font-bold { font-weight: bold; }
+              .text-sm { font-size: 0.875rem; }
+              .uppercase { text-transform: uppercase; }
+              .flex { display: flex; }
+              .justify-between { justify-content: space-between; }
+              .border-t { border-top: 1px solid #ddd; padding-top: 12px; margin-top: 12px; }
+              .pt-2 { padding-top: 8px; }
+              .mt-2 { margin-top: 8px; }
+              @media print {
+                body { margin: 0; padding: 0; }
+                .slip-container { border: none; max-width: 100%; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="slip-container">
+              ${content.innerHTML}
+            </div>
+            <script>
+              // Auto print
+              window.onload = function() {
+                window.print();
+                setTimeout(function() { window.close(); }, 500);
+              };
+            </script>
+          </body>
+        </html>
+      `);
       
-      // Clone the content to print
-      const printSection = document.createElement('div');
-      printSection.className = 'print-section';
-      printSection.appendChild(content.cloneNode(true));
-      document.body.appendChild(printSection);
-      
-      // Print
-      window.print();
-      
-      // Cleanup
-      document.body.removeChild(printSection);
-      document.body.style.display = originalDisplay;
-      document.body.style.overflow = originalOverflow;
+      // Log the user who printed the slip
+      const currentUser = JSON.parse(localStorage.getItem('current_user') || '{}');
+      if (currentUser?.name) {
+        console.log(`Delivery slip for order #${order.id} printed by ${currentUser.name}`);
+        
+        // Store print log in localStorage
+        const printLogs = JSON.parse(localStorage.getItem('print_logs') || '[]');
+        printLogs.push({
+          action: 'print_delivery_slip',
+          orderId: order.id,
+          user: currentUser.name,
+          timestamp: new Date().toISOString()
+        });
+        localStorage.setItem('print_logs', JSON.stringify(printLogs));
+      }
       
       toast.success("Printing delivery slip");
     } catch (error) {

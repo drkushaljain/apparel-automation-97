@@ -1,39 +1,52 @@
 
-export type OrderStatus = 
-  | 'pending'
-  | 'confirmed'
-  | 'packed'
-  | 'dispatched'
-  | 'out-for-delivery'
-  | 'delivered'
-  | 'cancelled';
+// User roles
+export type UserRole = "admin" | "manager" | "employee";
 
-export interface Customer {
+// User
+export interface User {
   id: string;
   name: string;
-  phone: string;
-  whatsapp: string;
-  email?: string;
-  address: string;
-  city: string;
-  state: string;
-  pincode: string;
+  email: string;
+  role: UserRole;
   createdAt: Date;
   updatedAt: Date;
-  orders: Order[];
+  lastLogin?: Date;
+  active: boolean;
 }
 
+// Product
 export interface Product {
   id: string;
   name: string;
   description?: string;
   price: number;
   imageUrl?: string;
+  sku?: string;
+  stock: number;
   isAvailable: boolean;
   createdAt: Date;
   updatedAt: Date;
+  sales: number;
+  category?: string;
 }
 
+// Customer
+export interface Customer {
+  id: string;
+  name: string;
+  email?: string;
+  phone: string;
+  whatsapp: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  createdAt: Date;
+  updatedAt: Date;
+  orders: string[]; // Array of order IDs
+}
+
+// Order Item
 export interface OrderItem {
   id: string;
   productId: string;
@@ -42,41 +55,81 @@ export interface OrderItem {
   price: number;
 }
 
+// Order Status
+export type OrderStatus = 
+  | "pending" 
+  | "confirmed" 
+  | "packed" 
+  | "dispatched" 
+  | "out-for-delivery" 
+  | "delivered" 
+  | "cancelled";
+
+// Order
 export interface Order {
   id: string;
   customerId: string;
   customer: Customer;
   items: OrderItem[];
   totalAmount: number;
-  transactionId?: string;
   status: OrderStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  transactionId?: string;
   trackingId?: string;
   trackingUrl?: string;
   dispatchImage?: string;
   notes?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdBy?: string; // User who created the order
 }
 
-export interface User {
+// Activity Log
+export interface ActivityLog {
+  id: string;
+  userId: string;
+  userName: string;
+  action: string;
+  entityType: "order" | "product" | "customer" | "user" | "system";
+  entityId?: string;
+  details?: string;
+  timestamp: Date;
+}
+
+// Sales Data
+export interface SalesData {
+  day: string;
+  amount: number;
+}
+
+// Product Category
+export interface ProductCategory {
   id: string;
   name: string;
-  email: string;
-  role: 'admin' | 'manager' | 'staff';
-  createdAt: Date;
-  updatedAt: Date;
+  description?: string;
+  productsCount: number;
 }
 
-export interface SalesStats {
+// Marketing Campaign
+export interface MarketingCampaign {
+  id: string;
+  name: string;
+  message: string;
+  targetType: "all" | "category" | "specific";
+  targetValue?: string; // Category name or specific customer IDs
+  status: "draft" | "scheduled" | "sent" | "cancelled";
+  scheduledDate?: Date;
+  sentDate?: Date;
+  createdBy: string;
+  createdAt: Date;
+}
+
+// Dashboard Stats
+export interface DashboardStats {
+  totalSales: number;
   totalOrders: number;
-  totalRevenue: number;
-  avgOrderValue: number;
   pendingOrders: number;
-  dispatchedOrders: number;
-  deliveredOrders: number;
-  dailySales: {
-    date: string;
-    orders: number;
-    revenue: number;
-  }[];
+  lowStockProducts: number;
+  topProducts: Product[];
+  recentActivity: ActivityLog[];
+  salesByDay: SalesData[];
 }
