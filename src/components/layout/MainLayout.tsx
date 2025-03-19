@@ -14,6 +14,7 @@ import {
   User,
   MessageSquare,
   FileText,
+  UserCog,
 } from "lucide-react";
 import { useAppContext } from "@/contexts/AppContext";
 import { cn } from "@/lib/utils";
@@ -87,6 +88,13 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       href: "/revenue",
       icon: FileText,
       current: location.pathname.startsWith("/revenue"),
+      roles: ["admin"],
+    },
+    {
+      name: "User Management",
+      href: "/users",
+      icon: UserCog,
+      current: location.pathname.startsWith("/users"),
       roles: ["admin"],
     },
     {

@@ -26,7 +26,8 @@ const Products = () => {
 
   // Get unique categories
   const categories = useMemo(() => {
-    return [...new Set(products.filter(p => p.category).map(p => p.category))];
+    const allCategories = products.filter(p => p.category).map(p => p.category as string);
+    return [...new Set(allCategories)];
   }, [products]);
 
   // Filtered products
@@ -178,7 +179,7 @@ const Products = () => {
                   <SelectContent>
                     <SelectItem value="">All Categories</SelectItem>
                     {categories.map((category, index) => (
-                      <SelectItem key={index} value={category || ""}>
+                      <SelectItem key={index} value={category}>
                         {category}
                       </SelectItem>
                     ))}
@@ -220,7 +221,7 @@ const Products = () => {
                     : "No products match your current filters."
                 }
                 actionText={products.length === 0 && canManageProducts ? "Add Product" : undefined}
-                actionLink={products.length === 0 && canManageProducts ? "/products/new" : undefined}
+                onAction={products.length === 0 && canManageProducts ? () => navigate("/products/new") : undefined}
                 icon={<Package className="h-12 w-12 text-primary/20" />}
               />
             ) : (

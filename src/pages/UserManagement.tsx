@@ -185,9 +185,8 @@ const UserManagement = () => {
                 title="No users found"
                 description="You haven't added any users yet."
                 actionText="Add User"
-                actionLink="#"
-                icon={<User className="h-12 w-12 text-primary/20" />}
                 onAction={() => handleOpenDialog()}
+                icon={<User className="h-12 w-12 text-primary/20" />}
               />
             ) : (
               <div className="rounded-md border">
