@@ -22,7 +22,7 @@ const Products = () => {
   // Search filter
   const [searchTerm, setSearchTerm] = useState("");
   const [showUnavailable, setShowUnavailable] = useState(true);
-  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all"); // Changed from empty string to "all"
 
   // Get unique categories
   const categories = useMemo(() => {
@@ -40,7 +40,7 @@ const Products = () => {
       
       const matchesAvailability = showUnavailable || product.isAvailable;
       
-      const matchesCategory = !categoryFilter || product.category === categoryFilter;
+      const matchesCategory = categoryFilter === "all" || product.category === categoryFilter; // Updated condition
       
       return matchesSearch && matchesAvailability && matchesCategory;
     });
@@ -177,7 +177,7 @@ const Products = () => {
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Categories</SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem> {/* Changed value from "" to "all" */}
                     {categories.map((category, index) => (
                       <SelectItem key={index} value={category}>
                         {category}
