@@ -14,6 +14,7 @@ import OrderDetail from "./pages/OrderDetail";
 import NewOrder from "./pages/NewOrder";
 import EditOrder from "./pages/EditOrder";
 import Customers from "./pages/Customers";
+import CustomerDetail from "./pages/CustomerDetail";
 import NewCustomer from "./pages/NewCustomer";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/orders/new" element={<NewOrder />} />
             <Route path="/orders/edit/:id" element={<EditOrder />} />
             <Route path="/customers" element={<Customers />} />
+            <Route path="/customers/:id" element={<CustomerDetail />} />
             <Route path="/customers/new" element={<NewCustomer />} />
             <Route path="/products" element={<Products />} />
             <Route path="/products/:id" element={<ProductDetail />} />

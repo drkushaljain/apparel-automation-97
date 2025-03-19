@@ -1,6 +1,7 @@
 
 import { useRef } from "react";
 import { Order } from "@/types";
+import { useAppContext } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -12,6 +13,8 @@ interface DeliverySlipProps {
 
 const DeliverySlip = ({ order }: DeliverySlipProps) => {
   const printRef = useRef<HTMLDivElement>(null);
+  const { state } = useAppContext();
+  const { companySettings } = state;
 
   const handlePrint = () => {
     try {
@@ -44,6 +47,7 @@ const DeliverySlip = ({ order }: DeliverySlipProps) => {
               .border-t { border-top: 1px solid #ddd; padding-top: 12px; margin-top: 12px; }
               .pt-2 { padding-top: 8px; }
               .mt-2 { margin-top: 8px; }
+              .company-logo { max-width: 100px; max-height: 100px; margin: 0 auto; display: block; }
               @media print {
                 body { margin: 0; padding: 0; }
                 .slip-container { border: none; max-width: 100%; }
@@ -99,10 +103,30 @@ const DeliverySlip = ({ order }: DeliverySlipProps) => {
       
       <Card className="border-2 p-0 max-w-md mx-auto">
         <CardContent ref={printRef} className="p-6 space-y-4">
+          {/* Company Header */}
           <div className="text-center border-b pb-4">
-            <h2 className="text-xl font-bold">DELIVERY SLIP</h2>
+            {companySettings?.logo && (
+              <div className="mb-2">
+                <img 
+                  src={companySettings.logo} 
+                  alt={companySettings.name} 
+                  className="mx-auto h-16 object-contain"
+                />
+              </div>
+            )}
+            <h2 className="text-xl font-bold">{companySettings?.name || "DELIVERY SLIP"}</h2>
             <p className="text-sm text-muted-foreground">Order #{order.id}</p>
           </div>
+          
+          {/* Company Details if available */}
+          {companySettings && (
+            <div className="text-center text-sm text-muted-foreground border-b pb-4">
+              <p>{companySettings.address}</p>
+              <p>{companySettings.city}, {companySettings.state} - {companySettings.pincode}</p>
+              <p>Phone: {companySettings.phone} | Email: {companySettings.email}</p>
+              {companySettings.taxId && <p>GST/Tax ID: {companySettings.taxId}</p>}
+            </div>
+          )}
           
           {/* Customer Details */}
           <div className="space-y-1">
@@ -154,6 +178,9 @@ const DeliverySlip = ({ order }: DeliverySlipProps) => {
           {/* Thank You Message */}
           <div className="text-center border-t pt-4">
             <p className="text-sm">Thank you for your order!</p>
+            {companySettings?.website && (
+              <p className="text-sm mt-1">{companySettings.website}</p>
+            )}
           </div>
         </CardContent>
       </Card>
