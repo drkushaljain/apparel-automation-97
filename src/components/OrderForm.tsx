@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import { Customer, Order, OrderItem, Product } from "@/types";
@@ -43,7 +42,6 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
   const [applyTax, setApplyTax] = useState<boolean>(initialData?.applyTax !== false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Set selected customer when customer ID changes
   useEffect(() => {
     if (selectedCustomerId) {
       const customer = customers.find(c => c.id === selectedCustomerId);
@@ -53,7 +51,6 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
     }
   }, [selectedCustomerId, customers]);
 
-  // Calculate amounts when items change
   useEffect(() => {
     let subTotal = 0;
     let discountSum = 0;
@@ -65,13 +62,11 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
       subTotal += itemSubtotal;
       discountSum += itemDiscount;
       
-      // Calculate tax if applicable
       if (applyTax && item.product.taxPercentage) {
         const taxableAmount = itemSubtotal - itemDiscount;
         const taxAmount = (taxableAmount * item.product.taxPercentage) / 100;
         taxSum += taxAmount;
         
-        // Update the item's tax amount
         item.taxAmount = taxAmount;
       } else {
         item.taxAmount = 0;
@@ -90,7 +85,6 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
       return;
     }
     
-    // Find first available product
     const availableProduct = products.find(p => p.isAvailable);
     
     if (!availableProduct) {
@@ -151,7 +145,6 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
     const item = items[index];
     const itemTotal = item.price * item.quantity;
     
-    // Ensure discount doesn't exceed the item total
     if (discountValue > itemTotal) {
       toast.error("Discount cannot exceed item total");
       return;
@@ -185,7 +178,6 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
     
     setIsLoading(true);
     
-    // Prepare order data
     const orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'> = {
       customerId: selectedCustomerId,
       customer: selectedCustomer!,
@@ -206,7 +198,6 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
       notes: notes || undefined
     };
     
-    // Submit order
     onSubmit(orderData);
     setIsLoading(false);
   };
@@ -218,7 +209,6 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
           <CardTitle>{initialData ? 'Edit Order' : 'New Order'}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Customer Selection */}
           <div className="space-y-2">
             <Label htmlFor="customer">Customer</Label>
             <Select
@@ -238,7 +228,6 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
             </Select>
           </div>
 
-          {/* Selected Customer Details */}
           {selectedCustomer && (
             <Card className="bg-muted/50">
               <CardContent className="p-4 text-sm">
@@ -259,7 +248,6 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
             </Card>
           )}
 
-          {/* Order Items */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <Label>Order Items</Label>
@@ -364,7 +352,6 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
                   </div>
                 ))}
 
-                {/* Order Summary */}
                 <Card className="bg-muted/20">
                   <CardContent className="p-4">
                     <div className="space-y-2">
@@ -384,8 +371,8 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
                           <Switch 
                             id="applyTax" 
                             checked={applyTax} 
-                            onCheckedChange={handleTaxToggle} 
-                            size="sm"
+                            onCheckedChange={handleTaxToggle}
+                            className="scale-75" 
                           />
                         </div>
                         <span>+₹{taxTotal.toFixed(2)}</span>
@@ -402,7 +389,6 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
             )}
           </div>
 
-          {/* Transaction ID */}
           <div className="space-y-2">
             <Label htmlFor="transactionId">Transaction ID (optional)</Label>
             <Input
@@ -413,7 +399,6 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
             />
           </div>
 
-          {/* Notes */}
           <div className="space-y-2">
             <Label htmlFor="notes">Order Notes (optional)</Label>
             <Textarea
