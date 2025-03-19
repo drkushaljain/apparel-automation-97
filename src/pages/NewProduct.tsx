@@ -22,6 +22,7 @@ const NewProduct = () => {
   const [category, setCategory] = useState("");
   const [isAvailable, setIsAvailable] = useState(true);
   const [sku, setSku] = useState("");
+  const [taxPercentage, setTaxPercentage] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -36,6 +37,7 @@ const NewProduct = () => {
       category,
       isAvailable,
       sku,
+      taxPercentage,
       stock: 0,
       sales: 0
     });
@@ -104,14 +106,28 @@ const NewProduct = () => {
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Input
-                  id="category"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  placeholder="Enter product category"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category</Label>
+                  <Input
+                    id="category"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    placeholder="Enter product category"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="taxPercentage">Tax Percentage (%)</Label>
+                  <Input
+                    id="taxPercentage"
+                    type="number"
+                    value={taxPercentage}
+                    onChange={(e) => setTaxPercentage(Number(e.target.value))}
+                    placeholder="0"
+                    min="0"
+                    max="100"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="imageUrl">Image URL</Label>

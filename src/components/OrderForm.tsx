@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrashIcon, Plus, X, ChevronDown } from "lucide-react";
+import { TrashIcon, Plus, X, ChevronDown, Percent, IndianRupee } from "lucide-react";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 
 interface OrderFormProps {
   initialData?: Order;
@@ -28,12 +29,18 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
       productId: item.productId,
       product: item.product,
       quantity: item.quantity,
-      price: item.price
+      price: item.price,
+      discount: item.discount || 0,
+      taxAmount: item.taxAmount || 0
     })) || []
   );
   const [transactionId, setTransactionId] = useState<string>(initialData?.transactionId || "");
   const [notes, setNotes] = useState<string>(initialData?.notes || "");
+  const [subtotal, setSubtotal] = useState<number>(0);
+  const [discountTotal, setDiscountTotal] = useState<number>(initialData?.discountTotal || 0);
+  const [taxTotal, setTaxTotal] = useState<number>(initialData?.taxTotal || 0);
   const [totalAmount, setTotalAmount] = useState<number>(initialData?.totalAmount || 0);
+  const [applyTax, setApplyTax] = useState<boolean>(initialData?.applyTax !== false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Set selected customer when customer ID changes
@@ -46,11 +53,36 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
     }
   }, [selectedCustomerId, customers]);
 
-  // Calculate total amount when items change
+  // Calculate amounts when items change
   useEffect(() => {
-    const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    setTotalAmount(total);
-  }, [items]);
+    let subTotal = 0;
+    let discountSum = 0;
+    let taxSum = 0;
+    
+    items.forEach(item => {
+      const itemSubtotal = item.price * item.quantity;
+      const itemDiscount = item.discount || 0;
+      subTotal += itemSubtotal;
+      discountSum += itemDiscount;
+      
+      // Calculate tax if applicable
+      if (applyTax && item.product.taxPercentage) {
+        const taxableAmount = itemSubtotal - itemDiscount;
+        const taxAmount = (taxableAmount * item.product.taxPercentage) / 100;
+        taxSum += taxAmount;
+        
+        // Update the item's tax amount
+        item.taxAmount = taxAmount;
+      } else {
+        item.taxAmount = 0;
+      }
+    });
+    
+    setSubtotal(subTotal);
+    setDiscountTotal(discountSum);
+    setTaxTotal(taxSum);
+    setTotalAmount(subTotal - discountSum + taxSum);
+  }, [items, applyTax]);
 
   const handleAddItem = () => {
     if (products.length === 0) {
@@ -70,7 +102,9 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
       productId: availableProduct.id,
       product: availableProduct,
       quantity: 1,
-      price: availableProduct.price
+      price: availableProduct.price,
+      discount: 0,
+      taxAmount: applyTax && availableProduct.taxPercentage ? (availableProduct.price * availableProduct.taxPercentage) / 100 : 0
     };
     
     setItems([...items, newItem]);
@@ -91,7 +125,9 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
       ...newItems[index],
       productId,
       product,
-      price: product.price
+      price: product.price,
+      discount: 0,
+      taxAmount: applyTax && product.taxPercentage ? (product.price * product.taxPercentage) / 100 : 0
     };
     
     setItems(newItems);
@@ -107,6 +143,31 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
     };
     
     setItems(newItems);
+  };
+  
+  const handleDiscountChange = (index: number, discountValue: number) => {
+    if (discountValue < 0) return;
+    
+    const item = items[index];
+    const itemTotal = item.price * item.quantity;
+    
+    // Ensure discount doesn't exceed the item total
+    if (discountValue > itemTotal) {
+      toast.error("Discount cannot exceed item total");
+      return;
+    }
+    
+    const newItems = [...items];
+    newItems[index] = {
+      ...newItems[index],
+      discount: discountValue
+    };
+    
+    setItems(newItems);
+  };
+
+  const handleTaxToggle = (checked: boolean) => {
+    setApplyTax(checked);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -132,7 +193,11 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
         ...item,
         id: initialData?.items[index]?.id || `tempId${index}`
       })),
+      subtotal,
+      discountTotal,
+      taxTotal,
       totalAmount,
+      applyTax,
       transactionId: transactionId || undefined,
       status: initialData?.status || 'pending',
       trackingId: initialData?.trackingId,
@@ -224,9 +289,18 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
               </div>
             ) : (
               <div className="space-y-3">
+                <div className="grid grid-cols-12 gap-2 text-sm text-muted-foreground px-3">
+                  <div className="col-span-4">Product</div>
+                  <div className="col-span-2 text-center">Quantity</div>
+                  <div className="col-span-2 text-center">Price</div>
+                  <div className="col-span-2 text-center">Discount</div>
+                  <div className="col-span-1 text-right">Total</div>
+                  <div className="col-span-1"></div>
+                </div>
+                
                 {items.map((item, index) => (
-                  <div key={index} className="flex gap-2 items-start p-3 border rounded-md">
-                    <div className="flex-1">
+                  <div key={index} className="grid grid-cols-12 gap-2 items-center p-3 border rounded-md">
+                    <div className="col-span-4">
                       <Select
                         value={item.productId}
                         onValueChange={(value) => handleProductChange(index, value)}
@@ -247,34 +321,83 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="w-24">
+                    <div className="col-span-2">
                       <Input
                         type="number"
                         min="1"
                         value={item.quantity}
                         onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
-                        className="text-right"
+                        className="text-center"
                       />
                     </div>
-                    <div className="w-24 text-right">
-                      <p className="py-2">₹{item.price * item.quantity}</p>
+                    <div className="col-span-2 text-center">
+                      <p>₹{item.price}</p>
+                      {item.product.taxPercentage && applyTax ? (
+                        <p className="text-xs text-muted-foreground">+{item.product.taxPercentage}% tax</p>
+                      ) : null}
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9"
-                      onClick={() => handleRemoveItem(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    <div className="col-span-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.discount || 0}
+                        onChange={(e) => handleDiscountChange(index, parseFloat(e.target.value) || 0)}
+                        className="text-center"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="col-span-1 text-right">
+                      <p>₹{(item.price * item.quantity) - (item.discount || 0)}</p>
+                    </div>
+                    <div className="col-span-1 text-right">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9"
+                        onClick={() => handleRemoveItem(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
 
-                <div className="flex justify-between items-center p-3 bg-muted/20 rounded-md">
-                  <p className="font-medium">Total</p>
-                  <p className="font-medium">₹{totalAmount}</p>
-                </div>
+                {/* Order Summary */}
+                <Card className="bg-muted/20">
+                  <CardContent className="p-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span>₹{subtotal.toFixed(2)}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Discount</span>
+                        <span>-₹{discountTotal.toFixed(2)}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Tax</span>
+                          <Switch 
+                            id="applyTax" 
+                            checked={applyTax} 
+                            onCheckedChange={handleTaxToggle} 
+                            size="sm"
+                          />
+                        </div>
+                        <span>+₹{taxTotal.toFixed(2)}</span>
+                      </div>
+                      
+                      <div className="border-t pt-2 flex justify-between items-center font-bold">
+                        <span>Total</span>
+                        <span>₹{totalAmount.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             )}
           </div>

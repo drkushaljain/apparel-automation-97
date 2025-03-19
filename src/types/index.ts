@@ -1,4 +1,3 @@
-
 // User roles
 export type UserRole = "admin" | "manager" | "employee";
 
@@ -35,13 +34,14 @@ export interface Product {
   description?: string;
   price: number;
   imageUrl?: string;
-  sku?: string;
+  category?: string;
   stock: number;
+  sku?: string;
   isAvailable: boolean;
+  sales: number;
+  taxPercentage?: number;
   createdAt: Date;
   updatedAt: Date;
-  sales: number;
-  category?: string;
 }
 
 // Customer
@@ -67,6 +67,8 @@ export interface OrderItem {
   product: Product;
   quantity: number;
   price: number;
+  discount?: number;
+  taxAmount?: number;
 }
 
 // Order Status
@@ -86,14 +88,18 @@ export interface Order {
   customer: Customer;
   items: OrderItem[];
   totalAmount: number;
-  status: OrderStatus;
-  createdAt: Date;
-  updatedAt: Date;
+  subtotal?: number;
+  discountTotal?: number;
+  taxTotal?: number;
+  applyTax?: boolean;
   transactionId?: string;
+  status: OrderStatus;
   trackingId?: string;
   trackingUrl?: string;
   dispatchImage?: string;
   notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
   createdBy?: string; // User who created the order
 }
 

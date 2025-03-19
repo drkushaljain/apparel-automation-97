@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { ShoppingBag, Users, DollarSign, Clock, Package, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import StockLogsDashboard from "@/components/dashboard/StockLogsDashboard";
 
 const Dashboard = () => {
   const { state } = useAppContext();
@@ -213,6 +214,11 @@ const Dashboard = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Stock Changes */}
+          <div className="col-span-12 md:col-span-4">
+            <StockLogsDashboard />
+          </div>
         </div>
       </div>
     </MainLayout>

@@ -4,12 +4,15 @@ import { useAppContext } from "@/contexts/AppContext";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Edit, Package, Tag, Truck, AlertCircle } from "lucide-react";
+import { ArrowLeft, Edit, Package, Tag, Truck, AlertCircle, Plus, Minus, IndianRupee, Percent } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ActivityLog } from "@/types";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +23,12 @@ const ProductDetail = () => {
   const product = products.find(p => p.id === id);
   const [productOrders, setProductOrders] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  
+  // Stock management state
+  const [customStockValue, setCustomStockValue] = useState<number>(1);
+  const [isAddStockDialogOpen, setIsAddStockDialogOpen] = useState(false);
+  const [isReduceStockDialogOpen, setIsReduceStockDialogOpen] = useState(false);
+  const [stockNote, setStockNote] = useState("");
   
   useEffect(() => {
     if (product) {
@@ -44,7 +53,7 @@ const ProductDetail = () => {
     }
   }, [product, orders]);
   
-  const handleStockUpdate = (change: number) => {
+  const handleStockUpdate = (change: number, note: string = "") => {
     if (!product) return;
     
     const newStock = Math.max(0, product.stock + change);
@@ -67,13 +76,39 @@ const ProductDetail = () => {
         action: change > 0 ? 'stock_increased' : 'stock_decreased',
         entityType: 'product',
         entityId: product.id,
-        details: `Stock ${change > 0 ? 'increased' : 'decreased'} by ${Math.abs(change)} units`,
+        details: `${note ? note + ': ' : ''}Stock ${change > 0 ? 'increased' : 'decreased'} by ${Math.abs(change)} units`,
         timestamp: new Date()
       });
       localStorage.setItem('activity_logs', JSON.stringify(logs));
     }
     
     toast.success(`Stock updated to ${newStock} units`);
+    
+    // Reset state
+    setCustomStockValue(1);
+    setStockNote("");
+    setIsAddStockDialogOpen(false);
+    setIsReduceStockDialogOpen(false);
+  };
+
+  const confirmAddStock = () => {
+    if (customStockValue <= 0) {
+      toast.error("Please enter a valid quantity");
+      return;
+    }
+    handleStockUpdate(customStockValue, stockNote);
+  };
+
+  const confirmReduceStock = () => {
+    if (customStockValue <= 0) {
+      toast.error("Please enter a valid quantity");
+      return;
+    }
+    if (product && customStockValue > product.stock) {
+      toast.error(`Cannot reduce more than current stock (${product.stock})`);
+      return;
+    }
+    handleStockUpdate(-customStockValue, stockNote);
   };
 
   if (!product) {
@@ -162,6 +197,10 @@ const ProductDetail = () => {
                       <h3 className="text-sm font-semibold text-muted-foreground">Total Sales</h3>
                       <p>{product.sales} units</p>
                     </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-muted-foreground">Tax Percentage</h3>
+                      <p>{product.taxPercentage || 0}%</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -187,32 +226,19 @@ const ProductDetail = () => {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => handleStockUpdate(-1)}
+                        onClick={() => setIsReduceStockDialogOpen(true)}
                         disabled={product.stock <= 0}
                       >
-                        -1
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleStockUpdate(-5)}
-                        disabled={product.stock <= 0}
-                      >
-                        -5
+                        <Minus className="h-4 w-4 mr-1" />
+                        Reduce Stock
                       </Button>
                       <Button 
                         variant="default" 
                         size="sm"
-                        onClick={() => handleStockUpdate(5)}
+                        onClick={() => setIsAddStockDialogOpen(true)}
                       >
-                        +5
-                      </Button>
-                      <Button 
-                        variant="default" 
-                        size="sm"
-                        onClick={() => handleStockUpdate(10)}
-                      >
-                        +10
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Stock
                       </Button>
                     </div>
                   </div>
@@ -265,6 +291,7 @@ const ProductDetail = () => {
                           </span>
                         </p>
                         <p className="text-xs text-muted-foreground">By {log.userName}</p>
+                        {log.details && <p className="text-xs">{log.details}</p>}
                       </div>
                     ))}
                   </div>
@@ -285,6 +312,85 @@ const ProductDetail = () => {
           </Card>
         </div>
       </div>
+
+      {/* Add Stock Dialog */}
+      <Dialog open={isAddStockDialogOpen} onOpenChange={setIsAddStockDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Stock</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="stock-amount">Quantity to Add</Label>
+              <Input
+                id="stock-amount"
+                type="number"
+                min="1"
+                value={customStockValue}
+                onChange={(e) => setCustomStockValue(Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="stock-note">Note (Optional)</Label>
+              <Input
+                id="stock-note"
+                placeholder="New shipment, restock, etc."
+                value={stockNote}
+                onChange={(e) => setStockNote(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddStockDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmAddStock}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Stock
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reduce Stock Dialog */}
+      <Dialog open={isReduceStockDialogOpen} onOpenChange={setIsReduceStockDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reduce Stock</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="stock-amount">Quantity to Reduce</Label>
+              <Input
+                id="stock-amount"
+                type="number"
+                min="1"
+                max={product.stock}
+                value={customStockValue}
+                onChange={(e) => setCustomStockValue(Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="stock-note">Reason (Optional)</Label>
+              <Input
+                id="stock-note"
+                placeholder="Damaged items, internal use, etc."
+                value={stockNote}
+                onChange={(e) => setStockNote(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReduceStockDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmReduceStock}>
+              <Minus className="h-4 w-4 mr-2" />
+              Reduce Stock
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };

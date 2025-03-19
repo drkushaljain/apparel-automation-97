@@ -25,6 +25,7 @@ const EditProduct = () => {
   const [stock, setStock] = useState<number>(0);
   const [sku, setSku] = useState("");
   const [isAvailable, setIsAvailable] = useState(true);
+  const [taxPercentage, setTaxPercentage] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -39,6 +40,7 @@ const EditProduct = () => {
         setStock(product.stock);
         setSku(product.sku || "");
         setIsAvailable(product.isAvailable);
+        setTaxPercentage(product.taxPercentage || 0);
       } else {
         toast.error("Product not found");
         navigate("/products");
@@ -72,6 +74,7 @@ const EditProduct = () => {
       stock,
       sku,
       isAvailable,
+      taxPercentage,
     });
     
     setIsLoading(false);
@@ -176,14 +179,28 @@ const EditProduct = () => {
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="imageUrl">Image URL</Label>
-                <Input
-                  id="imageUrl"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="Enter image URL"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="imageUrl">Image URL</Label>
+                  <Input
+                    id="imageUrl"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    placeholder="Enter image URL"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="taxPercentage">Tax Percentage (%)</Label>
+                  <Input
+                    id="taxPercentage"
+                    type="number"
+                    value={taxPercentage}
+                    onChange={(e) => setTaxPercentage(Number(e.target.value))}
+                    placeholder="0"
+                    min="0"
+                    max="100"
+                  />
+                </div>
               </div>
               <div className="flex items-center space-x-2">
                 <Switch
