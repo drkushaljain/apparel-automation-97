@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, UserPlus, Edit, Trash } from "lucide-react";
+import { User, UserPlus, Edit, Trash, Shield, ShieldAlert, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { User as UserType, UserRole, UserPermissions } from "@/types";
 import NoContent from "@/components/NoContent";
@@ -99,6 +99,7 @@ const UserManagement = () => {
         active,
         permissions,
       });
+      toast.success(`User ${name} added successfully`);
     } else {
       // Update existing user
       updateUser({
@@ -110,6 +111,7 @@ const UserManagement = () => {
         active,
         permissions,
       });
+      toast.success(`User ${name} updated successfully`);
     }
     
     setIsDialogOpen(false);
@@ -126,7 +128,7 @@ const UserManagement = () => {
     setRole(newRole);
     // Update permissions based on role
     setPermissions({
-      canViewDashboard: newRole === "admin",
+      canViewDashboard: newRole === "admin" || newRole === "manager",
       canManageProducts: newRole !== "employee",
       canManageOrders: true,
       canManageCustomers: true,
@@ -135,6 +137,17 @@ const UserManagement = () => {
       canSendMarketing: newRole !== "employee", 
       canViewReports: newRole !== "employee",
     });
+  };
+
+  const getRoleIcon = (role: UserRole) => {
+    switch (role) {
+      case "admin":
+        return <ShieldAlert className="h-4 w-4 text-red-500" />;
+      case "manager":
+        return <ShieldCheck className="h-4 w-4 text-blue-500" />;
+      default:
+        return <Shield className="h-4 w-4 text-gray-500" />;
+    }
   };
 
   // Only admin can access this page
@@ -193,7 +206,12 @@ const UserManagement = () => {
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.name}</TableCell>
                         <TableCell>{user.email}</TableCell>
-                        <TableCell className="capitalize">{user.role}</TableCell>
+                        <TableCell className="capitalize">
+                          <div className="flex items-center gap-1">
+                            {getRoleIcon(user.role)}
+                            {user.role}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded-full text-xs ${user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                             {user.active ? 'Active' : 'Inactive'}
@@ -286,6 +304,13 @@ const UserManagement = () => {
                     <SelectItem value="employee">Employee</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-sm text-muted-foreground">
+                  {role === "admin" 
+                    ? "Admins have full access to all features and can manage users." 
+                    : role === "manager" 
+                      ? "Managers can view reports and manage most parts of the system except for users." 
+                      : "Employees have limited access to basic functionality."}
+                </p>
               </div>
               
               <div className="flex items-center space-x-2">
@@ -351,8 +376,11 @@ const UserManagement = () => {
                       onCheckedChange={(checked) => 
                         setPermissions({...permissions, canManageUsers: !!checked})
                       }
+                      disabled={role !== "admin"}
                     />
-                    <Label htmlFor="perm-users">Manage Users</Label>
+                    <Label htmlFor="perm-users" className={role !== "admin" ? "text-muted-foreground" : ""}>
+                      Manage Users {role !== "admin" && "(Admin only)"}
+                    </Label>
                   </div>
                   
                   <div className="flex items-center space-x-2">

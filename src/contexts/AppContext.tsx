@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { Customer, Order, OrderStatus, Product, User, CompanySettings } from '@/types';
 import { generateMockOrders, mockCustomers, mockProducts, mockUsers } from '@/data/mockData';
@@ -427,6 +428,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const setCurrentUser = (user: User | null) => {
     dispatch({ type: 'SET_CURRENT_USER', payload: user });
+    if (user) {
+      localStorage.setItem('current_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('current_user');
+    }
   };
 
   const contextValue: AppContextType = {

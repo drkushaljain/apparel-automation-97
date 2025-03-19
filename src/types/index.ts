@@ -123,6 +123,9 @@ export interface ProductCategory {
   productsCount: number;
 }
 
+// Marketing Campaign Status
+export type CampaignStatus = "draft" | "scheduled" | "sent" | "cancelled";
+
 // Marketing Campaign
 export interface MarketingCampaign {
   id: string;
@@ -130,7 +133,7 @@ export interface MarketingCampaign {
   message: string;
   targetType: "all" | "category" | "specific";
   targetValue?: string; // Category name or specific customer IDs
-  status: "draft" | "scheduled" | "sent" | "cancelled";
+  status: CampaignStatus;
   scheduledDate?: Date;
   sentDate?: Date;
   createdBy: string;
