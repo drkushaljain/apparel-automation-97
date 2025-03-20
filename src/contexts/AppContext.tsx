@@ -1,10 +1,22 @@
-
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { Customer, Order, OrderStatus, Product, User, CompanySettings } from '@/types';
 import { generateMockOrders, mockCustomers, mockProducts, mockUsers } from '@/data/mockData';
 import { toast } from 'sonner';
 import * as dbService from '@/services/dbService';
 import { format } from 'date-fns';
+
+export interface StockChange {
+  id: string;
+  productId: string;
+  productName: string;
+  previousStock: number;
+  newStock: number;
+  changeAmount: number;
+  userId: string;
+  userName: string;
+  timestamp: Date;
+  reason: string;
+}
 
 interface AppState {
   products: Product[];
@@ -14,6 +26,7 @@ interface AppState {
   currentUser: User | null;
   companySettings: CompanySettings | null;
   isLoading: boolean;
+  stockHistory: StockChange[];
 }
 
 type AppAction =
@@ -36,7 +49,10 @@ type AppAction =
   | { type: 'DELETE_USER'; payload: string }
   | { type: 'SET_CURRENT_USER'; payload: User | null }
   | { type: 'SET_COMPANY_SETTINGS'; payload: CompanySettings }
-  | { type: 'SET_LOADING'; payload: boolean };
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'ADD_STOCK_CHANGE'; payload: StockChange }
+  | { type: 'SET_STOCK_HISTORY'; payload: StockChange[] }
+  | { type: 'UPDATE_PRODUCT_STOCK'; payload: { productId: string; newStock: number } };
 
 interface AppContextType {
   state: AppState;
@@ -58,6 +74,7 @@ interface AppContextType {
   setCompanySettings: (settings: CompanySettings) => void;
   logActivity: (action: string, entityType: "order" | "product" | "customer" | "user" | "system", entityId?: string, details?: string) => void;
   formatDate: (date: Date | string) => string;
+  updateProductStock: (productId: string, changeAmount: number, reason: string) => void;
 }
 
 const initialState: AppState = {
@@ -67,7 +84,8 @@ const initialState: AppState = {
   users: [],
   currentUser: null,
   companySettings: null,
-  isLoading: true
+  isLoading: true,
+  stockHistory: []
 };
 
 const reducer = (state: AppState, action: AppAction): AppState => {
@@ -151,6 +169,22 @@ const reducer = (state: AppState, action: AppAction): AppState => {
       return { ...state, companySettings: action.payload };
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
+    case 'ADD_STOCK_CHANGE':
+      return { 
+        ...state, 
+        stockHistory: [action.payload, ...state.stockHistory]
+      };
+    case 'SET_STOCK_HISTORY':
+      return { ...state, stockHistory: action.payload };
+    case 'UPDATE_PRODUCT_STOCK':
+      return {
+        ...state,
+        products: state.products.map(product => 
+          product.id === action.payload.productId 
+            ? { ...product, stock: action.payload.newStock, updatedAt: new Date() } 
+            : product
+        )
+      };
     default:
       return state;
   }
@@ -184,9 +218,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         dispatch({ type: 'SET_ORDERS', payload: orders.length ? orders : generateMockOrders() });
         
         const updatedUsers = (users.length ? users : mockUsers).map(user => {
-          if (!user.permissions) {
+          if (!user.password) {
             return {
               ...user,
+              password: "password",
               active: user.active !== undefined ? user.active : true,
               permissions: {
                 canViewDashboard: user.role === "admin",
@@ -204,7 +239,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         });
         
         dispatch({ type: 'SET_USERS', payload: updatedUsers });
-        dispatch({ type: 'SET_CURRENT_USER', payload: updatedUsers[0] });
+        
+        const stockHistory = JSON.parse(localStorage.getItem('stock_history') || '[]');
+        dispatch({ type: 'SET_STOCK_HISTORY', payload: stockHistory });
         
         if (companySettings) {
           dispatch({ type: 'SET_COMPANY_SETTINGS', payload: companySettings });
@@ -252,8 +289,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (state.companySettings) {
         dbService.saveCompanySettings(state.companySettings);
       }
+      
+      localStorage.setItem('stock_history', JSON.stringify(state.stockHistory));
     }
-  }, [state.products, state.customers, state.orders, state.users, state.companySettings, state.isLoading]);
+  }, [state.products, state.customers, state.orders, state.users, state.companySettings, state.stockHistory, state.isLoading]);
 
   const addProduct = (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newProduct: Product = {
@@ -435,6 +474,56 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const updateProductStock = (productId: string, changeAmount: number, reason: string) => {
+    if (!state.currentUser) {
+      toast.error("You must be logged in to update stock");
+      return;
+    }
+    
+    const product = state.products.find(p => p.id === productId);
+    if (!product) {
+      toast.error("Product not found");
+      return;
+    }
+    
+    const previousStock = product.stock;
+    const newStock = previousStock + changeAmount;
+    
+    if (newStock < 0) {
+      toast.error("Stock cannot be negative");
+      return;
+    }
+    
+    dispatch({
+      type: 'UPDATE_PRODUCT_STOCK',
+      payload: { productId, newStock }
+    });
+    
+    const stockChange: StockChange = {
+      id: `sc${Date.now()}`,
+      productId,
+      productName: product.name,
+      previousStock,
+      newStock,
+      changeAmount,
+      userId: state.currentUser.id,
+      userName: state.currentUser.name,
+      timestamp: new Date(),
+      reason
+    };
+    
+    dispatch({ type: 'ADD_STOCK_CHANGE', payload: stockChange });
+    
+    logActivity(
+      changeAmount > 0 ? 'stock_added' : 'stock_removed',
+      'product',
+      productId,
+      `${Math.abs(changeAmount)} units ${changeAmount > 0 ? 'added to' : 'removed from'} ${product.name} stock. Reason: ${reason}`
+    );
+    
+    toast.success(`Stock ${changeAmount > 0 ? 'increased' : 'decreased'} successfully`);
+  };
+
   const contextValue: AppContextType = {
     state,
     dispatch,
@@ -454,7 +543,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setCurrentUser,
     setCompanySettings,
     logActivity,
-    formatDate
+    formatDate,
+    updateProductStock
   };
 
   return (

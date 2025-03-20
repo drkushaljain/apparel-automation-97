@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import { Customer, Order, OrderItem, Product } from "@/types";
@@ -41,6 +42,7 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
   const [totalAmount, setTotalAmount] = useState<number>(initialData?.totalAmount || 0);
   const [applyTax, setApplyTax] = useState<boolean>(initialData?.applyTax !== false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [stockErrors, setStockErrors] = useState<{[key: string]: string}>({});
 
   useEffect(() => {
     if (selectedCustomerId) {
@@ -85,10 +87,10 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
       return;
     }
     
-    const availableProduct = products.find(p => p.isAvailable);
+    const availableProduct = products.find(p => p.isAvailable && p.stock > 0);
     
     if (!availableProduct) {
-      toast.error("No available products");
+      toast.error("No available products with stock");
       return;
     }
     
@@ -108,6 +110,11 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
     const newItems = [...items];
     newItems.splice(index, 1);
     setItems(newItems);
+    
+    // Also clear any stock errors for this item
+    const newStockErrors = {...stockErrors};
+    delete newStockErrors[`item-${index}`];
+    setStockErrors(newStockErrors);
   };
 
   const handleProductChange = (index: number, productId: string) => {
@@ -115,22 +122,51 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
     if (!product) return;
     
     const newItems = [...items];
+    const quantity = 1; // Reset quantity to 1 when product changes
+    
     newItems[index] = {
       ...newItems[index],
       productId,
       product,
+      quantity,
       price: product.price,
       discount: 0,
       taxAmount: applyTax && product.taxPercentage ? (product.price * product.taxPercentage) / 100 : 0
     };
     
     setItems(newItems);
+    validateStockForItem(index, product, quantity);
+  };
+
+  const validateStockForItem = (index: number, product: Product, quantity: number) => {
+    const newStockErrors = {...stockErrors};
+    
+    if (quantity > product.stock) {
+      newStockErrors[`item-${index}`] = `Only ${product.stock} available in stock`;
+    } else {
+      delete newStockErrors[`item-${index}`];
+    }
+    
+    setStockErrors(newStockErrors);
   };
 
   const handleQuantityChange = (index: number, quantity: number) => {
     if (quantity < 1) return;
     
     const newItems = [...items];
+    const product = newItems[index].product;
+    
+    // Validate stock
+    if (quantity > product.stock) {
+      // Update stock error message
+      validateStockForItem(index, product, quantity);
+    } else {
+      // Clear stock error
+      const newStockErrors = {...stockErrors};
+      delete newStockErrors[`item-${index}`];
+      setStockErrors(newStockErrors);
+    }
+    
     newItems[index] = {
       ...newItems[index],
       quantity
@@ -176,6 +212,26 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
       return;
     }
     
+    // Check for stock errors
+    if (Object.keys(stockErrors).length > 0) {
+      toast.error("Please fix stock quantity issues before continuing");
+      return;
+    }
+    
+    // Additional validation: check all item quantities against stock
+    let hasStockIssues = false;
+    items.forEach((item, index) => {
+      if (item.quantity > item.product.stock) {
+        validateStockForItem(index, item.product, item.quantity);
+        hasStockIssues = true;
+      }
+    });
+    
+    if (hasStockIssues) {
+      toast.error("Some items exceed available stock");
+      return;
+    }
+    
     setIsLoading(true);
     
     const orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -208,7 +264,7 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
         <CardHeader>
           <CardTitle>{initialData ? 'Edit Order' : 'New Order'}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 max-h-[calc(100vh-20rem)] overflow-y-auto">
           <div className="space-y-2">
             <Label htmlFor="customer">Customer</Label>
             <Select
@@ -301,18 +357,22 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
                             <SelectItem 
                               key={product.id} 
                               value={product.id}
-                              disabled={!product.isAvailable}
+                              disabled={!product.isAvailable || product.stock === 0}
                             >
-                              {product.name} - ₹{product.price}
+                              {product.name} - ₹{product.price} (Stock: {product.stock})
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {stockErrors[`item-${index}`] && (
+                        <p className="text-xs text-red-500 mt-1">{stockErrors[`item-${index}`]}</p>
+                      )}
                     </div>
                     <div className="col-span-2">
                       <Input
                         type="number"
                         min="1"
+                        max={item.product.stock}
                         value={item.quantity}
                         onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
                         className="text-center"
@@ -414,7 +474,7 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isLoading || items.length === 0 || !selectedCustomerId}>
+          <Button type="submit" disabled={isLoading || items.length === 0 || !selectedCustomerId || Object.keys(stockErrors).length > 0}>
             {initialData ? 'Update Order' : 'Create Order'}
           </Button>
         </CardFooter>

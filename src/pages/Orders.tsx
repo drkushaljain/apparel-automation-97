@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { OrderStatus } from "@/types";
-import { Search, Plus, FileDown } from "lucide-react";
+import { Search, Plus, FileDown, Printer } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import NoContent from "@/components/NoContent";
 import { ShoppingBag } from "lucide-react";
@@ -77,6 +77,11 @@ const Orders = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+  
+  // Print bill function
+  const printBill = (orderId: string) => {
+    navigate(`/orders/${orderId}?print=true`);
   };
 
   if (isLoading) {
@@ -164,7 +169,7 @@ const Orders = () => {
                 icon={<ShoppingBag className="h-12 w-12 text-primary/20" />}
               />
             ) : (
-              <div className="rounded-md border">
+              <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -187,13 +192,23 @@ const Orders = () => {
                         <TableCell className="text-right">₹{order.totalAmount}</TableCell>
                         <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/orders/${order.id}`)}
-                          >
-                            View
-                          </Button>
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => printBill(order.id)}
+                              title="Print Bill"
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/orders/${order.id}`)}
+                            >
+                              View
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

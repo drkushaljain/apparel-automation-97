@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -9,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { User, UserCog, LogOut, MessageSquare, Users } from "lucide-react";
+import { User, Building, UserCog, LogOut, MessageSquare, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -108,6 +107,10 @@ const Settings = () => {
     console.log("Customers:", eligibleCustomers);
   };
 
+  const handleGoToCompanySettings = () => {
+    navigate("/settings/company");
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6 animate-fade-in">
@@ -116,7 +119,7 @@ const Settings = () => {
         </div>
 
         <Tabs defaultValue="business" className="space-y-6">
-          <TabsList>
+          <TabsList className="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-5 gap-2">
             <TabsTrigger value="business">
               <User className="h-4 w-4 mr-2" />
               Business
@@ -145,6 +148,15 @@ const Settings = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <Button 
+                  onClick={handleGoToCompanySettings}
+                  variant="outline"
+                  className="w-full"
+                >
+                  <Building className="h-4 w-4 mr-2" />
+                  Manage Company Details & Logo
+                </Button>
+                
                 <div className="space-y-2">
                   <Label htmlFor="business-name">Business Name</Label>
                   <Input

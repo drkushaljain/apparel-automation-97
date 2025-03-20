@@ -21,6 +21,7 @@ import ProductDetail from "./pages/ProductDetail";
 import NewProduct from "./pages/NewProduct";
 import EditProduct from "./pages/EditProduct";
 import Settings from "./pages/Settings";
+import CompanySettings from "./pages/CompanySettings";
 import MarketingCampaigns from "./pages/MarketingCampaigns";
 import RevenueReport from "./pages/RevenueReport";
 import UserManagement from "./pages/UserManagement";
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/products/new" element={<NewProduct />} />
             <Route path="/products/edit/:id" element={<EditProduct />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/company" element={<CompanySettings />} />
             <Route path="/marketing" element={<MarketingCampaigns />} />
             <Route path="/revenue" element={<RevenueReport />} />
             <Route path="/users" element={<UserManagement />} />

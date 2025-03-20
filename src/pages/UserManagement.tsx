@@ -1,155 +1,222 @@
-
-import { useState } from "react";
+import React, { useState } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, UserPlus, Edit, Trash, Shield, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { User, UserRole } from "@/types";
 import { toast } from "sonner";
-import { User as UserType, UserRole, UserPermissions } from "@/types";
-import NoContent from "@/components/NoContent";
+import { Plus, UserPlus, Trash2, UserCog } from "lucide-react";
 
 const UserManagement = () => {
   const { state, addUser, updateUser, deleteUser } = useAppContext();
   const { users, currentUser } = state;
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserType | null>(null);
   
+  const [newUserDialog, setNewUserDialog] = useState(false);
+  const [editUserDialog, setEditUserDialog] = useState(false);
+  
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  
+  // New user form fields
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("employee");
-  const [active, setActive] = useState(true);
-  const [permissions, setPermissions] = useState<UserPermissions>({
-    canViewDashboard: false,
-    canManageProducts: false,
-    canManageOrders: false,
-    canManageCustomers: false,
-    canManageUsers: false,
-    canExportData: false,
-    canSendMarketing: false,
-    canViewReports: false,
-  });
-
+  const [isActive, setIsActive] = useState(true);
+  
+  // Permissions
+  const [canViewDashboard, setCanViewDashboard] = useState(false);
+  const [canManageProducts, setCanManageProducts] = useState(false);
+  const [canManageOrders, setCanManageOrders] = useState(true);
+  const [canManageCustomers, setCanManageCustomers] = useState(true);
+  const [canManageUsers, setCanManageUsers] = useState(false);
+  const [canExportData, setCanExportData] = useState(false);
+  const [canSendMarketing, setCanSendMarketing] = useState(false);
+  const [canViewReports, setCanViewReports] = useState(false);
+  
+  // Reset form fields
   const resetForm = () => {
     setName("");
     setEmail("");
-    setPhone("");
+    setPassword("");
     setRole("employee");
-    setActive(true);
-    setPermissions({
-      canViewDashboard: false,
-      canManageProducts: false,
-      canManageOrders: false,
-      canManageCustomers: false,
-      canManageUsers: false,
-      canExportData: false,
-      canSendMarketing: false,
-      canViewReports: false,
-    });
-    setEditingUser(null);
+    setIsActive(true);
+    
+    setCanViewDashboard(false);
+    setCanManageProducts(false);
+    setCanManageOrders(true);
+    setCanManageCustomers(true);
+    setCanManageUsers(false);
+    setCanExportData(false);
+    setCanSendMarketing(false);
+    setCanViewReports(false);
   };
-
-  const handleOpenDialog = (user?: UserType) => {
-    if (user) {
-      setEditingUser(user);
-      setName(user.name);
-      setEmail(user.email);
-      setPhone(user.phone || "");
-      setRole(user.role);
-      setActive(user.active !== undefined ? user.active : true);
-      setPermissions(user.permissions || {
-        canViewDashboard: user.role === "admin",
-        canManageProducts: user.role !== "employee",
-        canManageOrders: true,
-        canManageCustomers: true,
-        canManageUsers: user.role === "admin",
-        canExportData: user.role !== "employee",
-        canSendMarketing: user.role !== "employee",
-        canViewReports: user.role !== "employee",
-      });
+  
+  // Handle role change - preset permissions based on role
+  const handleRoleChange = (newRole: UserRole) => {
+    setRole(newRole);
+    
+    if (newRole === "admin") {
+      setCanViewDashboard(true);
+      setCanManageProducts(true);
+      setCanManageOrders(true);
+      setCanManageCustomers(true);
+      setCanManageUsers(true);
+      setCanExportData(true);
+      setCanSendMarketing(true);
+      setCanViewReports(true);
+    } else if (newRole === "manager") {
+      setCanViewDashboard(true);
+      setCanManageProducts(true);
+      setCanManageOrders(true);
+      setCanManageCustomers(true);
+      setCanManageUsers(false);
+      setCanExportData(true);
+      setCanSendMarketing(true);
+      setCanViewReports(true);
     } else {
-      resetForm();
+      setCanViewDashboard(false);
+      setCanManageProducts(false);
+      setCanManageOrders(true);
+      setCanManageCustomers(true);
+      setCanManageUsers(false);
+      setCanExportData(false);
+      setCanSendMarketing(false);
+      setCanViewReports(false);
     }
-    setIsDialogOpen(true);
   };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  
+  // Open edit user dialog
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    
+    setName(user.name);
+    setEmail(user.email);
+    setPassword(""); // Don't populate password
+    setRole(user.role);
+    setIsActive(user.active !== undefined ? user.active : true);
+    
+    const permissions = user.permissions || {
+      canViewDashboard: user.role === "admin",
+      canManageProducts: user.role !== "employee",
+      canManageOrders: true,
+      canManageCustomers: true,
+      canManageUsers: user.role === "admin",
+      canExportData: user.role !== "employee",
+      canSendMarketing: user.role !== "employee",
+      canViewReports: user.role !== "employee",
+    };
+    
+    setCanViewDashboard(permissions.canViewDashboard);
+    setCanManageProducts(permissions.canManageProducts);
+    setCanManageOrders(permissions.canManageOrders);
+    setCanManageCustomers(permissions.canManageCustomers);
+    setCanManageUsers(permissions.canManageUsers);
+    setCanExportData(permissions.canExportData);
+    setCanSendMarketing(permissions.canSendMarketing);
+    setCanViewReports(permissions.canViewReports);
+    
+    setEditUserDialog(true);
+  };
+  
+  // Submit handler for creating new user
+  const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name || !email) {
-      toast.error("Name and email are required");
+    if (!name || !email || !password) {
+      toast.error("Please fill in all required fields");
       return;
     }
     
-    if (!editingUser) {
-      // Add new user
-      addUser({
-        name,
-        email,
-        phone,
-        role,
-        active,
-        permissions,
-      });
-      toast.success(`User ${name} added successfully`);
-    } else {
-      // Update existing user
-      updateUser({
-        ...editingUser,
-        name,
-        email,
-        phone,
-        role,
-        active,
-        permissions,
-      });
-      toast.success(`User ${name} updated successfully`);
+    // Check for duplicate email
+    const existingUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (existingUser) {
+      toast.error("A user with this email already exists");
+      return;
     }
     
-    setIsDialogOpen(false);
+    const newUser = {
+      name,
+      email,
+      password,
+      role,
+      active: isActive,
+      permissions: {
+        canViewDashboard,
+        canManageProducts,
+        canManageOrders,
+        canManageCustomers,
+        canManageUsers,
+        canExportData,
+        canSendMarketing,
+        canViewReports,
+      }
+    };
+    
+    addUser(newUser);
     resetForm();
+    setNewUserDialog(false);
   };
-
-  const handleDeleteUser = (user: UserType) => {
-    if (window.confirm(`Are you sure you want to delete ${user.name}?`)) {
-      deleteUser(user.id);
+  
+  // Submit handler for updating user
+  const handleUpdateUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedUser) return;
+    
+    if (!name || !email) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    
+    // Check for duplicate email (excluding current user)
+    const existingUser = users.find(
+      u => u.id !== selectedUser.id && u.email.toLowerCase() === email.toLowerCase()
+    );
+    if (existingUser) {
+      toast.error("A user with this email already exists");
+      return;
+    }
+    
+    const updatedUser = {
+      ...selectedUser,
+      name,
+      email,
+      ...(password ? { password } : {}), // Only update password if provided
+      role,
+      active: isActive,
+      permissions: {
+        canViewDashboard,
+        canManageProducts,
+        canManageOrders,
+        canManageCustomers,
+        canManageUsers,
+        canExportData,
+        canSendMarketing,
+        canViewReports,
+      },
+      updatedAt: new Date()
+    };
+    
+    updateUser(updatedUser);
+    resetForm();
+    setEditUserDialog(false);
+    setSelectedUser(null);
+  };
+  
+  // Handle delete user
+  const handleDeleteUser = (userId: string) => {
+    if (window.confirm("Are you sure you want to delete this user?")) {
+      deleteUser(userId);
     }
   };
-
-  const handleRoleChange = (newRole: UserRole) => {
-    setRole(newRole);
-    // Update permissions based on role
-    setPermissions({
-      canViewDashboard: newRole === "admin" || newRole === "manager",
-      canManageProducts: newRole !== "employee",
-      canManageOrders: true,
-      canManageCustomers: true,
-      canManageUsers: newRole === "admin",
-      canExportData: newRole !== "employee",
-      canSendMarketing: newRole !== "employee", 
-      canViewReports: newRole !== "employee",
-    });
-  };
-
-  const getRoleIcon = (role: UserRole) => {
-    switch (role) {
-      case "admin":
-        return <ShieldAlert className="h-4 w-4 text-red-500" />;
-      case "manager":
-        return <ShieldCheck className="h-4 w-4 text-blue-500" />;
-      default:
-        return <Shield className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
+  
   // Only admin can access this page
   if (currentUser?.role !== "admin") {
     return (
@@ -169,132 +236,264 @@ const UserManagement = () => {
       <div className="space-y-6 animate-fade-in">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
-          <Button onClick={() => handleOpenDialog()}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add User
-          </Button>
+          <Dialog open={newUserDialog} onOpenChange={setNewUserDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="h-4 w-4 mr-2" />
+                New User
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create New User</DialogTitle>
+                <DialogDescription>
+                  Add a new user to the system
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateUser}>
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Name *</Label>
+                    <Input
+                      id="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Enter name"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Enter email"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password *</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter password"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="role">Role</Label>
+                    <Select
+                      value={role}
+                      onValueChange={(value: UserRole) => handleRoleChange(value)}
+                    >
+                      <SelectTrigger id="role">
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="manager">Manager</SelectItem>
+                        <SelectItem value="employee">Employee</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="active"
+                      checked={isActive}
+                      onCheckedChange={setIsActive}
+                    />
+                    <Label htmlFor="active">Active Account</Label>
+                  </div>
+                  
+                  <div className="pt-2 border-t">
+                    <h3 className="font-medium mb-2">Permissions</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="dashboard"
+                          checked={canViewDashboard}
+                          onCheckedChange={(checked) => setCanViewDashboard(!!checked)}
+                        />
+                        <Label htmlFor="dashboard" className="leading-none">Dashboard</Label>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="products"
+                          checked={canManageProducts}
+                          onCheckedChange={(checked) => setCanManageProducts(!!checked)}
+                        />
+                        <Label htmlFor="products" className="leading-none">Manage Products</Label>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="orders"
+                          checked={canManageOrders}
+                          onCheckedChange={(checked) => setCanManageOrders(!!checked)}
+                        />
+                        <Label htmlFor="orders" className="leading-none">Manage Orders</Label>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="customers"
+                          checked={canManageCustomers}
+                          onCheckedChange={(checked) => setCanManageCustomers(!!checked)}
+                        />
+                        <Label htmlFor="customers" className="leading-none">Manage Customers</Label>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="users"
+                          checked={canManageUsers}
+                          onCheckedChange={(checked) => setCanManageUsers(!!checked)}
+                        />
+                        <Label htmlFor="users" className="leading-none">Manage Users</Label>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="export"
+                          checked={canExportData}
+                          onCheckedChange={(checked) => setCanExportData(!!checked)}
+                        />
+                        <Label htmlFor="export" className="leading-none">Export Data</Label>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="marketing"
+                          checked={canSendMarketing}
+                          onCheckedChange={(checked) => setCanSendMarketing(!!checked)}
+                        />
+                        <Label htmlFor="marketing" className="leading-none">Send Marketing</Label>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="reports"
+                          checked={canViewReports}
+                          onCheckedChange={(checked) => setCanViewReports(!!checked)}
+                        />
+                        <Label htmlFor="reports" className="leading-none">View Reports</Label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit">Create User</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
-
+        
         <Card>
           <CardHeader>
-            <CardTitle>Users</CardTitle>
+            <CardTitle>System Users</CardTitle>
           </CardHeader>
           <CardContent>
-            {users.length === 0 ? (
-              <NoContent
-                title="No users found"
-                description="You haven't added any users yet."
-                actionText="Add User"
-                onAction={() => handleOpenDialog()}
-                icon={<User className="h-12 w-12 text-primary/20" />}
-              />
-            ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+            <div className="rounded-md border overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell className="capitalize">{user.role}</TableCell>
+                      <TableCell>
+                        {user.active !== false ? (
+                          <span className="text-green-600 text-sm">Active</span>
+                        ) : (
+                          <span className="text-red-600 text-sm">Inactive</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditUser(user)}
+                            disabled={user.id === currentUser?.id} // Prevent editing own user
+                          >
+                            <UserCog className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteUser(user.id)}
+                            disabled={user.id === currentUser?.id} // Prevent deleting own user
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell className="capitalize">
-                          <div className="flex items-center gap-1">
-                            {getRoleIcon(user.role)}
-                            {user.role}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                            {user.active ? 'Active' : 'Inactive'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleOpenDialog(user)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            {user.id !== currentUser?.id && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteUser(user)}
-                              >
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
-
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
-              <DialogDescription>
-                {editingUser 
-                  ? 'Update user details and permissions' 
-                  : 'Add a new user to the system with specific roles and permissions'
-                }
-              </DialogDescription>
-            </DialogHeader>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
+      </div>
+      
+      {/* Edit User Dialog */}
+      <Dialog open={editUserDialog} onOpenChange={setEditUserDialog}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user information and permissions
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateUser}>
+            <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="edit-name">Name *</Label>
                 <Input
-                  id="name"
+                  id="edit-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter full name"
+                  placeholder="Enter name"
                   required
                 />
               </div>
-              
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="edit-email">Email *</Label>
                 <Input
-                  id="email"
+                  id="edit-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter email address"
+                  placeholder="Enter email"
                   required
                 />
               </div>
-              
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="edit-password">Password (leave blank to keep current)</Label>
                 <Input
-                  id="phone"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Enter phone number"
+                  id="edit-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter new password"
                 />
               </div>
-              
               <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Select value={role} onValueChange={(val: UserRole) => handleRoleChange(val)}>
-                  <SelectTrigger>
+                <Label htmlFor="edit-role">Role</Label>
+                <Select
+                  value={role}
+                  onValueChange={(value: UserRole) => handleRoleChange(value)}
+                >
+                  <SelectTrigger id="edit-role">
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
@@ -303,129 +502,92 @@ const UserManagement = () => {
                     <SelectItem value="employee">Employee</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-sm text-muted-foreground">
-                  {role === "admin" 
-                    ? "Admins have full access to all features and can manage users." 
-                    : role === "manager" 
-                      ? "Managers can view reports and manage most parts of the system except for users." 
-                      : "Employees have limited access to basic functionality."}
-                </p>
               </div>
-              
               <div className="flex items-center space-x-2">
                 <Switch
-                  id="active"
-                  checked={active}
-                  onCheckedChange={setActive}
+                  id="edit-active"
+                  checked={isActive}
+                  onCheckedChange={setIsActive}
                 />
-                <Label htmlFor="active">Active</Label>
+                <Label htmlFor="edit-active">Active Account</Label>
               </div>
               
-              <div className="space-y-2">
-                <Label>Permissions</Label>
-                <div className="bg-muted/20 p-3 rounded-md space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="perm-dashboard" 
-                      checked={permissions.canViewDashboard}
-                      onCheckedChange={(checked) => 
-                        setPermissions({...permissions, canViewDashboard: !!checked})
-                      }
+              <div className="pt-2 border-t">
+                <h3 className="font-medium mb-2">Permissions</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div className="flex items-start space-x-2">
+                    <Checkbox
+                      id="edit-dashboard"
+                      checked={canViewDashboard}
+                      onCheckedChange={(checked) => setCanViewDashboard(!!checked)}
                     />
-                    <Label htmlFor="perm-dashboard">View Dashboard</Label>
+                    <Label htmlFor="edit-dashboard" className="leading-none">Dashboard</Label>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="perm-products" 
-                      checked={permissions.canManageProducts}
-                      onCheckedChange={(checked) => 
-                        setPermissions({...permissions, canManageProducts: !!checked})
-                      }
+                  <div className="flex items-start space-x-2">
+                    <Checkbox
+                      id="edit-products"
+                      checked={canManageProducts}
+                      onCheckedChange={(checked) => setCanManageProducts(!!checked)}
                     />
-                    <Label htmlFor="perm-products">Manage Products</Label>
+                    <Label htmlFor="edit-products" className="leading-none">Manage Products</Label>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="perm-orders" 
-                      checked={permissions.canManageOrders}
-                      onCheckedChange={(checked) => 
-                        setPermissions({...permissions, canManageOrders: !!checked})
-                      }
+                  <div className="flex items-start space-x-2">
+                    <Checkbox
+                      id="edit-orders"
+                      checked={canManageOrders}
+                      onCheckedChange={(checked) => setCanManageOrders(!!checked)}
                     />
-                    <Label htmlFor="perm-orders">Manage Orders</Label>
+                    <Label htmlFor="edit-orders" className="leading-none">Manage Orders</Label>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="perm-customers" 
-                      checked={permissions.canManageCustomers}
-                      onCheckedChange={(checked) => 
-                        setPermissions({...permissions, canManageCustomers: !!checked})
-                      }
+                  <div className="flex items-start space-x-2">
+                    <Checkbox
+                      id="edit-customers"
+                      checked={canManageCustomers}
+                      onCheckedChange={(checked) => setCanManageCustomers(!!checked)}
                     />
-                    <Label htmlFor="perm-customers">Manage Customers</Label>
+                    <Label htmlFor="edit-customers" className="leading-none">Manage Customers</Label>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="perm-users" 
-                      checked={permissions.canManageUsers}
-                      onCheckedChange={(checked) => 
-                        setPermissions({...permissions, canManageUsers: !!checked})
-                      }
-                      disabled={role !== "admin"}
+                  <div className="flex items-start space-x-2">
+                    <Checkbox
+                      id="edit-users"
+                      checked={canManageUsers}
+                      onCheckedChange={(checked) => setCanManageUsers(!!checked)}
                     />
-                    <Label htmlFor="perm-users" className={role !== "admin" ? "text-muted-foreground" : ""}>
-                      Manage Users {role !== "admin" && "(Admin only)"}
-                    </Label>
+                    <Label htmlFor="edit-users" className="leading-none">Manage Users</Label>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="perm-export" 
-                      checked={permissions.canExportData}
-                      onCheckedChange={(checked) => 
-                        setPermissions({...permissions, canExportData: !!checked})
-                      }
+                  <div className="flex items-start space-x-2">
+                    <Checkbox
+                      id="edit-export"
+                      checked={canExportData}
+                      onCheckedChange={(checked) => setCanExportData(!!checked)}
                     />
-                    <Label htmlFor="perm-export">Export Data</Label>
+                    <Label htmlFor="edit-export" className="leading-none">Export Data</Label>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="perm-marketing" 
-                      checked={permissions.canSendMarketing}
-                      onCheckedChange={(checked) => 
-                        setPermissions({...permissions, canSendMarketing: !!checked})
-                      }
+                  <div className="flex items-start space-x-2">
+                    <Checkbox
+                      id="edit-marketing"
+                      checked={canSendMarketing}
+                      onCheckedChange={(checked) => setCanSendMarketing(!!checked)}
                     />
-                    <Label htmlFor="perm-marketing">Send Marketing Messages</Label>
+                    <Label htmlFor="edit-marketing" className="leading-none">Send Marketing</Label>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="perm-reports" 
-                      checked={permissions.canViewReports}
-                      onCheckedChange={(checked) => 
-                        setPermissions({...permissions, canViewReports: !!checked})
-                      }
+                  <div className="flex items-start space-x-2">
+                    <Checkbox
+                      id="edit-reports"
+                      checked={canViewReports}
+                      onCheckedChange={(checked) => setCanViewReports(!!checked)}
                     />
-                    <Label htmlFor="perm-reports">View Reports</Label>
+                    <Label htmlFor="edit-reports" className="leading-none">View Reports</Label>
                   </div>
                 </div>
               </div>
-              
-              <DialogFooter>
-                <Button type="submit">
-                  {editingUser ? 'Update User' : 'Add User'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit">Update User</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };
