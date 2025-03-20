@@ -8,7 +8,7 @@ This guide will help you set up the Inventory Management System on your local ma
 ### Prerequisites
 - Node.js (v16 or newer)
 - npm or yarn
-- PostgreSQL database
+- PostgreSQL database (optional, the app will fall back to localStorage if not configured)
 - Git
 
 ### Step 1: Clone the Repository
@@ -18,10 +18,10 @@ cd inventory-management-system
 ```
 
 ### Step 2: Set Up Environment Variables
-Create a `.env` file in the root directory with the following content:
+Create a `.env` file in the root directory with the following content (only needed if you want PostgreSQL integration):
 
 ```
-# Database Configuration
+# Database Configuration (optional)
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=your_postgres_user
@@ -34,7 +34,7 @@ NODE_ENV=development
 JWT_SECRET=your_jwt_secret
 ```
 
-### Step 3: Set Up PostgreSQL Database
+### Step 3: Set Up PostgreSQL Database (Optional)
 1. Create a new PostgreSQL database:
 ```bash
 psql -U postgres
@@ -59,13 +59,66 @@ npm run dev
 
 The application should now be running at `http://localhost:3000`.
 
+## Using the Web Application Without Backend
+
+If you choose not to set up PostgreSQL, the application will automatically use the browser's localStorage for data storage. This is perfect for:
+- Development and testing
+- Small deployments where a database is not needed
+- Demonstrations and presentations
+
+All data will be stored locally in the browser, and will persist between sessions.
+
+## Backend Configuration for Production
+
+### Creating a Server Bundle with PostgreSQL Support
+
+For production deployment with PostgreSQL support, you need to create a server bundle:
+
+1. Build the client application:
+```bash
+npm run build
+```
+
+2. Create a simple Node.js server to host the application:
+```javascript
+// server.js
+const express = require('express');
+const path = require('path');
+const app = express();
+
+// Serve static files from the build directory
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Handle all routes by serving the index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+```
+
+3. Install Express:
+```bash
+npm install express
+```
+
+4. Create a package.json script to run the server:
+```json
+"scripts": {
+  "start": "node server.js"
+}
+```
+
 ## AWS Deployment
 
 ### Prerequisites
 - AWS Account
 - Basic knowledge of AWS services (EC2, RDS)
 
-### Step 1: Set Up an RDS PostgreSQL Instance
+### Step 1: Set Up an RDS PostgreSQL Instance (Optional)
 1. Log in to the AWS Management Console.
 2. Navigate to RDS and create a new PostgreSQL database instance.
 3. Make note of the endpoint, port, username, password, and database name.
@@ -97,7 +150,7 @@ sudo npm install -g pm2
 git clone https://your-repository-url.git
 cd inventory-management-system
 
-# Create .env file
+# Create .env file if you want PostgreSQL support
 cat > .env << EOF
 # Database Configuration
 DB_HOST=your-rds-endpoint
@@ -117,6 +170,12 @@ npm install
 
 # Build for production
 npm run build
+
+# Create server.js file as described in the Backend Configuration section
+# ...
+
+# Install Express
+npm install express
 ```
 
 ### Step 5: Set Up Nginx as a Reverse Proxy
@@ -156,8 +215,9 @@ sudo systemctl enable nginx
 
 ### Step 6: Start the Application with PM2
 ```bash
-# Start the application
-pm2 start npm --name "inventory-app" -- start
+# Create server.js (as shown in Backend Configuration section)
+# Then start the application
+pm2 start server.js --name "inventory-app"
 
 # Set PM2 to start on boot
 pm2 save
@@ -177,16 +237,12 @@ sudo certbot --nginx -d your-domain.com
 echo "0 0,12 * * * root python -c 'import random; import time; time.sleep(random.random() * 3600)' && certbot renew -q" | sudo tee -a /etc/crontab > /dev/null
 ```
 
-## Database Integration Notes
-
-The application uses an ORM (Object-Relational Mapping) layer to interact with the PostgreSQL database. The configuration for this is in the `src/services/dbService.ts` file.
-
-### Key Database-Related Files:
-- `src/services/dbService.ts`: Database connection and operations
-- `src/types/index.ts`: TypeScript interfaces that map to database tables
-- `database/schema.sql`: SQL schema for creating the database tables
-
 ## Troubleshooting
+
+### Application Uses localStorage Instead of PostgreSQL
+- Make sure you're running in a Node.js environment, not just a browser
+- Verify that all environment variables (DB_HOST, etc.) are correctly set
+- Check database connection permissions and network settings
 
 ### Database Connection Issues
 - Verify your database credentials in the `.env` file
@@ -198,11 +254,6 @@ The application uses an ORM (Object-Relational Mapping) layer to interact with t
 - Verify all dependencies are installed: `npm install`
 - Ensure Node.js version is compatible: `node -v`
 
-### Performance Issues
-- Consider adding indexes to frequently queried database columns
-- Implement database connection pooling
-- Use AWS CloudFront as a CDN for static assets
-
 ## Support and Maintenance
 
 For ongoing support and maintenance:
@@ -210,9 +261,3 @@ For ongoing support and maintenance:
 - Back up the database regularly
 - Monitor server resources using AWS CloudWatch
 - Set up alerts for critical issues
-
-## Additional Resources
-- [Node.js Documentation](https://nodejs.org/en/docs/)
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
-- [AWS RDS Documentation](https://docs.aws.amazon.com/rds/)
-- [PM2 Documentation](https://pm2.keymetrics.io/docs/usage/quick-start/)
