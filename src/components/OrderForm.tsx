@@ -156,16 +156,18 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
     const newItems = [...items];
     const product = newItems[index].product;
     
-    // Validate stock
+    // Strict stock validation - Don't allow entering more than available stock
     if (quantity > product.stock) {
-      // Update stock error message
-      validateStockForItem(index, product, quantity);
+      // Show error message
+      const newStockErrors = {...stockErrors};
+      newStockErrors[`item-${index}`] = `Only ${product.stock} available in stock`;
+      setStockErrors(newStockErrors);
       
-      // Set quantity to max available stock instead of allowing invalid amount
+      // Limit quantity to available stock
       quantity = product.stock;
       toast.warning(`Quantity adjusted to maximum available stock (${product.stock})`);
     } else {
-      // Clear stock error
+      // Clear stock error if it exists
       const newStockErrors = {...stockErrors};
       delete newStockErrors[`item-${index}`];
       setStockErrors(newStockErrors);
@@ -216,28 +218,26 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
       return;
     }
     
-    // Check for stock errors
-    if (Object.keys(stockErrors).length > 0) {
-      toast.error("Please fix stock quantity issues before continuing");
-      return;
-    }
-    
-    // Additional validation: check all item quantities against stock
+    // Final stock validation check before submission
     let hasStockIssues = false;
+    
     items.forEach((item, index) => {
       if (item.quantity > item.product.stock) {
-        validateStockForItem(index, item.product, item.quantity);
+        const newStockErrors = {...stockErrors};
+        newStockErrors[`item-${index}`] = `Only ${item.product.stock} available in stock`;
+        setStockErrors(newStockErrors);
         hasStockIssues = true;
       }
     });
     
-    if (hasStockIssues) {
-      toast.error("Some items exceed available stock");
+    if (hasStockIssues || Object.keys(stockErrors).length > 0) {
+      toast.error("Please fix stock quantity issues before continuing");
       return;
     }
     
     setIsLoading(true);
     
+    // Create the order data and submit
     const orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'> = {
       customerId: selectedCustomerId,
       customer: selectedCustomer!,
@@ -255,7 +255,8 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
       trackingId: initialData?.trackingId,
       trackingUrl: initialData?.trackingUrl,
       dispatchImage: initialData?.dispatchImage,
-      notes: notes || undefined
+      notes: notes || undefined,
+      createdBy: state.currentUser?.id
     };
     
     onSubmit(orderData);
