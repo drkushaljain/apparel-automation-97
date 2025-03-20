@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -13,15 +14,20 @@ import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Settings = () => {
-  const { state, setCurrentUser } = useAppContext();
-  const { currentUser, customers, products } = state;
+  const { state, setCurrentUser, updateCompanySettings } = useAppContext();
+  const { currentUser, customers, products, companySettings } = state;
   const navigate = useNavigate();
 
-  const [businessName, setBusinessName] = useState("Apparel Management");
-  const [businessEmail, setBusinessEmail] = useState("contact@apparelmanagement.com");
-  const [businessPhone, setBusinessPhone] = useState("9876543210");
-  const [businessAddress, setBusinessAddress] = useState("123 Business Street, City, State - 123456");
-  
+  const [businessName, setBusinessName] = useState(companySettings?.name || "Apparel Management");
+  const [businessEmail, setBusinessEmail] = useState(companySettings?.email || "contact@apparelmanagement.com");
+  const [businessPhone, setBusinessPhone] = useState(companySettings?.phone || "9876543210");
+  const [businessAddress, setBusinessAddress] = useState(companySettings?.address || "123 Business Street, City, State - 123456");
+  const [businessCity, setBusinessCity] = useState(companySettings?.city || "City");
+  const [businessState, setBusinessState] = useState(companySettings?.state || "State");
+  const [businessPincode, setBusinessPincode] = useState(companySettings?.pincode || "123456");
+  const [businessWebsite, setBusinessWebsite] = useState(companySettings?.website || "www.apparelmanagement.com");
+  const [businessTaxId, setBusinessTaxId] = useState(companySettings?.taxId || "");
+
   const [whatsappTemplate, setWhatsappTemplate] = useState(
     "Hello {{customerName}}, your order #{{orderId}} has been {{status}}. {{trackingInfo}}"
   );
@@ -34,6 +40,21 @@ const Settings = () => {
   const [isSending, setIsSending] = useState(false);
   
   const handleSaveBusinessInfo = () => {
+    const updatedSettings = {
+      ...companySettings,
+      name: businessName,
+      email: businessEmail,
+      phone: businessPhone,
+      address: businessAddress,
+      city: businessCity,
+      state: businessState,
+      pincode: businessPincode,
+      website: businessWebsite,
+      taxId: businessTaxId,
+      logo: companySettings?.logo || ""
+    };
+    
+    updateCompanySettings(updatedSettings);
     toast.success("Business information saved successfully");
   };
   
@@ -147,7 +168,7 @@ const Settings = () => {
                   Update your business details that will appear on invoices and delivery slips
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 max-h-[70vh] overflow-y-auto">
                 <Button 
                   onClick={handleGoToCompanySettings}
                   variant="outline"
@@ -165,23 +186,27 @@ const Settings = () => {
                     onChange={(e) => setBusinessName(e.target.value)}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="business-email">Email</Label>
-                  <Input
-                    id="business-email"
-                    type="email"
-                    value={businessEmail}
-                    onChange={(e) => setBusinessEmail(e.target.value)}
-                  />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="business-email">Email</Label>
+                    <Input
+                      id="business-email"
+                      type="email"
+                      value={businessEmail}
+                      onChange={(e) => setBusinessEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="business-phone">Phone</Label>
+                    <Input
+                      id="business-phone"
+                      value={businessPhone}
+                      onChange={(e) => setBusinessPhone(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="business-phone">Phone</Label>
-                  <Input
-                    id="business-phone"
-                    value={businessPhone}
-                    onChange={(e) => setBusinessPhone(e.target.value)}
-                  />
-                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="business-address">Address</Label>
                   <Textarea
@@ -190,6 +215,52 @@ const Settings = () => {
                     onChange={(e) => setBusinessAddress(e.target.value)}
                     rows={3}
                   />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="business-city">City</Label>
+                    <Input
+                      id="business-city"
+                      value={businessCity}
+                      onChange={(e) => setBusinessCity(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="business-state">State</Label>
+                    <Input
+                      id="business-state"
+                      value={businessState}
+                      onChange={(e) => setBusinessState(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="business-pincode">Pin Code</Label>
+                    <Input
+                      id="business-pincode"
+                      value={businessPincode}
+                      onChange={(e) => setBusinessPincode(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="business-website">Website</Label>
+                    <Input
+                      id="business-website"
+                      value={businessWebsite}
+                      onChange={(e) => setBusinessWebsite(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="business-taxid">GST/Tax ID</Label>
+                    <Input
+                      id="business-taxid"
+                      value={businessTaxId}
+                      onChange={(e) => setBusinessTaxId(e.target.value)}
+                    />
+                  </div>
                 </div>
               </CardContent>
               <CardFooter>
@@ -207,7 +278,7 @@ const Settings = () => {
                   Customize the messages that are sent to customers via WhatsApp
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 max-h-[70vh] overflow-y-auto">
                 <div className="space-y-2">
                   <Label htmlFor="whatsapp-template">Order Status Update Template</Label>
                   <Textarea
@@ -236,7 +307,7 @@ const Settings = () => {
                   Send marketing messages to multiple customers based on products or categories
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 max-h-[70vh] overflow-y-auto">
                 <div className="space-y-2">
                   <Label htmlFor="bulk-message-type">Message Recipients</Label>
                   <Select 
@@ -338,7 +409,7 @@ const Settings = () => {
                   View and manage your account details
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 max-h-[70vh] overflow-y-auto">
                 {currentUser && (
                   <div className="space-y-4">
                     <div className="space-y-2">

@@ -466,7 +466,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const setCurrentUser = (user: User | null) => {
-    dispatch({ type: 'SET_CURRENT_USER', payload: user });
+    setState(prev => ({ ...prev, currentUser: user }));
+    
     if (user) {
       localStorage.setItem('current_user', JSON.stringify(user));
     } else {

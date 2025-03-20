@@ -13,6 +13,7 @@ import { Search, Plus, FileDown, Printer } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import NoContent from "@/components/NoContent";
 import { ShoppingBag } from "lucide-react";
+import { toast } from "sonner";
 
 const Orders = () => {
   const { state } = useAppContext();
@@ -81,7 +82,175 @@ const Orders = () => {
   
   // Print bill function
   const printBill = (orderId: string) => {
-    navigate(`/orders/${orderId}?print=true`);
+    const order = orders.find(o => o.id === orderId);
+    if (!order) {
+      toast.error("Order not found");
+      return;
+    }
+    
+    try {
+      // Create a new window for printing
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast.error("Unable to open print window. Please check your popup blocker settings.");
+        return;
+      }
+      
+      const { companySettings } = state;
+      
+      // Add necessary styles and content
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Invoice - Order #${order.id}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+              .invoice-container { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 30px; }
+              .text-center { text-align: center; }
+              .text-right { text-align: right; }
+              .border-b { border-bottom: 1px solid #ddd; padding-bottom: 15px; margin-bottom: 15px; }
+              .font-bold { font-weight: bold; }
+              .text-sm { font-size: 0.875rem; }
+              .text-lg { font-size: 1.125rem; }
+              .text-xl { font-size: 1.25rem; }
+              .uppercase { text-transform: uppercase; }
+              .flex { display: flex; }
+              .justify-between { justify-content: space-between; }
+              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+              .border-t { border-top: 1px solid #ddd; padding-top: 15px; margin-top: 15px; }
+              .pt-2 { padding-top: 10px; }
+              .mt-2 { margin-top: 10px; }
+              .mt-4 { margin-top: 20px; }
+              .mb-4 { margin-bottom: 20px; }
+              .company-logo { max-width: 150px; max-height: 80px; }
+              table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+              table th, table td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+              table th { background-color: #f5f5f5; }
+              .invoice-header { display: flex; justify-content: space-between; }
+              .invoice-title { font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #333; }
+              .invoice-meta { margin-bottom: 30px; }
+              .invoice-meta-item { margin-bottom: 5px; }
+              .invoice-total { font-size: 20px; font-weight: bold; }
+              @media print {
+                body { margin: 0; padding: 0; }
+                .invoice-container { border: none; max-width: 100%; padding: 10px; }
+                .no-print { display: none; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="invoice-container">
+              <div class="invoice-header border-b">
+                <div>
+                  ${companySettings?.logo ? 
+                    `<img src="${companySettings.logo}" alt="${companySettings.name}" class="company-logo" />` : ''}
+                  <h1 class="invoice-title">${companySettings?.name || "INVOICE"}</h1>
+                </div>
+                <div class="text-right">
+                  <div class="invoice-meta-item">Invoice #: ${order.id}</div>
+                  <div class="invoice-meta-item">Date: ${new Date(order.createdAt).toLocaleDateString()}</div>
+                  ${order.transactionId ? `<div class="invoice-meta-item">Transaction ID: ${order.transactionId}</div>` : ''}
+                </div>
+              </div>
+              
+              <div class="grid mt-4 mb-4">
+                <div>
+                  <h3>Billed From:</h3>
+                  <div>${companySettings?.name || "Company Name"}</div>
+                  <div>${companySettings?.address || ""}</div>
+                  <div>${companySettings?.city || ""}, ${companySettings?.state || ""} - ${companySettings?.pincode || ""}</div>
+                  <div>Phone: ${companySettings?.phone || ""}</div>
+                  <div>Email: ${companySettings?.email || ""}</div>
+                  ${companySettings?.taxId ? `<div>GST/Tax ID: ${companySettings.taxId}</div>` : ''}
+                </div>
+                <div>
+                  <h3>Billed To:</h3>
+                  <div class="font-bold">${order.customer.name}</div>
+                  <div>${order.customer.address}</div>
+                  <div>${order.customer.city}, ${order.customer.state} - ${order.customer.pincode}</div>
+                  <div>Phone: ${order.customer.phone}</div>
+                </div>
+              </div>
+              
+              <table>
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Discount</th>
+                    <th>Tax</th>
+                    <th class="text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${order.items.map(item => `
+                    <tr>
+                      <td>${item.product.name}</td>
+                      <td>${item.quantity}</td>
+                      <td>₹${item.price.toFixed(2)}</td>
+                      <td>${item.discount ? `₹${item.discount.toFixed(2)}` : '-'}</td>
+                      <td>${item.taxAmount ? `₹${item.taxAmount.toFixed(2)}` : '-'}</td>
+                      <td class="text-right">₹${((item.price * item.quantity) - (item.discount || 0) + (item.taxAmount || 0)).toFixed(2)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+              
+              <div class="border-t">
+                <div class="flex justify-between">
+                  <div>Subtotal:</div>
+                  <div>₹${order.subtotal.toFixed(2)}</div>
+                </div>
+                <div class="flex justify-between">
+                  <div>Discount:</div>
+                  <div>-₹${order.discountTotal.toFixed(2)}</div>
+                </div>
+                <div class="flex justify-between">
+                  <div>Tax:</div>
+                  <div>+₹${order.taxTotal.toFixed(2)}</div>
+                </div>
+                <div class="flex justify-between border-t pt-2 mt-2 invoice-total">
+                  <div>Total:</div>
+                  <div>₹${order.totalAmount.toFixed(2)}</div>
+                </div>
+              </div>
+              
+              ${order.notes ? `
+                <div class="border-t pt-2 mt-4">
+                  <h3>Notes:</h3>
+                  <p>${order.notes}</p>
+                </div>
+              ` : ''}
+              
+              <div class="text-center border-t pt-2 mt-4 text-sm">
+                <p>Thank you for your business!</p>
+                ${companySettings?.website ? `<p>${companySettings.website}</p>` : ''}
+              </div>
+            </div>
+            
+            <script>
+              // Auto print
+              window.onload = function() {
+                window.print();
+                setTimeout(function() { window.close(); }, 500);
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      
+      // Log the print event
+      const currentUser = JSON.parse(localStorage.getItem('current_user') || '{}');
+      if (currentUser?.name) {
+        console.log(`Invoice for order #${order.id} printed by ${currentUser.name}`);
+      }
+      
+      toast.success("Printing invoice");
+    } catch (error) {
+      console.error("Error printing:", error);
+      toast.error("Failed to print invoice");
+    }
   };
 
   if (isLoading) {

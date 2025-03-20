@@ -160,6 +160,10 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
     if (quantity > product.stock) {
       // Update stock error message
       validateStockForItem(index, product, quantity);
+      
+      // Set quantity to max available stock instead of allowing invalid amount
+      quantity = product.stock;
+      toast.warning(`Quantity adjusted to maximum available stock (${product.stock})`);
     } else {
       // Clear stock error
       const newStockErrors = {...stockErrors};

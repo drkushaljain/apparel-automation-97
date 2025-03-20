@@ -19,10 +19,11 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  password: string;
+  active: boolean;
   createdAt: Date;
   updatedAt: Date;
   lastLogin?: Date;
-  active: boolean;
   phone?: string;
   permissions: UserPermissions;
 }
