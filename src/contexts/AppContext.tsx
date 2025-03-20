@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { Customer, Order, OrderStatus, Product, User, CompanySettings } from '@/types';
+import { Customer, Order, OrderStatus, Product, User, CompanySettings, StockHistoryRecord } from '@/types';
 import { generateMockOrders, mockCustomers, mockProducts, mockUsers } from '@/data/mockData';
 import { toast } from 'sonner';
 import * as dbService from '@/services/dbService';
@@ -433,7 +433,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     dispatch({ type: 'SET_COMPANY_SETTINGS', payload: settings });
     toast.success('Company settings updated successfully');
   };
-  
+
   const updateCompanySettings = (settings: CompanySettings) => {
     dispatch({ type: 'SET_COMPANY_SETTINGS', payload: settings });
     toast.success('Company settings updated successfully');
@@ -569,3 +569,4 @@ export const useAppContext = (): AppContextType => {
   }
   return context;
 };
+

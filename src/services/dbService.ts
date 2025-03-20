@@ -1,5 +1,4 @@
-// ... keep existing code
-
+import { Product, Customer, Order, User, CompanySettings, StockHistoryRecord } from '@/types';
 import postgresService from './postgresService';
 
 // Add PostgreSQL support
@@ -42,20 +41,143 @@ export const initializeDatabase = async (
   // Fall back to localStorage if PostgreSQL is not available
   console.log('Using localStorage for data storage');
   
-  // ... keep existing localStorage initialization code
+  // Initialize localStorage with initial data if empty
+  if (!localStorage.getItem('products')) {
+    localStorage.setItem('products', JSON.stringify(initialProducts));
+  }
+  
+  if (!localStorage.getItem('customers')) {
+    localStorage.setItem('customers', JSON.stringify(initialCustomers));
+  }
+  
+  if (!localStorage.getItem('orders')) {
+    localStorage.setItem('orders', JSON.stringify(initialOrders));
+  }
+  
+  if (!localStorage.getItem('users')) {
+    localStorage.setItem('users', JSON.stringify(initialUsers));
+  }
 };
 
-// Update all database operations to use PostgreSQL when available
-
+// Products
 export const getProducts = async (): Promise<Product[]> => {
   if (usePostgres) {
     return postgresService.getProducts();
   }
   
-  // ... keep existing localStorage implementation
+  const products = localStorage.getItem('products');
+  return products ? JSON.parse(products) : [];
 };
 
-// ... update other database operations similarly
+export const saveProducts = async (products: Product[]): Promise<void> => {
+  if (usePostgres) {
+    // In a real implementation, this would bulk update products in PostgreSQL
+    // For simplicity, we'll just log that it would update
+    console.log('Would update products in PostgreSQL');
+    return;
+  }
+  
+  localStorage.setItem('products', JSON.stringify(products));
+};
+
+// Customers
+export const getCustomers = async (): Promise<Customer[]> => {
+  if (usePostgres) {
+    // This would be implemented in postgresService
+    return []; // Placeholder
+  }
+  
+  const customers = localStorage.getItem('customers');
+  return customers ? JSON.parse(customers) : [];
+};
+
+export const saveCustomers = async (customers: Customer[]): Promise<void> => {
+  if (usePostgres) {
+    console.log('Would update customers in PostgreSQL');
+    return;
+  }
+  
+  localStorage.setItem('customers', JSON.stringify(customers));
+};
+
+// Orders
+export const getOrders = async (): Promise<Order[]> => {
+  if (usePostgres) {
+    // This would be implemented in postgresService
+    return []; // Placeholder
+  }
+  
+  const orders = localStorage.getItem('orders');
+  return orders ? JSON.parse(orders) : [];
+};
+
+export const saveOrders = async (orders: Order[]): Promise<void> => {
+  if (usePostgres) {
+    console.log('Would update orders in PostgreSQL');
+    return;
+  }
+  
+  localStorage.setItem('orders', JSON.stringify(orders));
+};
+
+// Users
+export const getUsers = async (): Promise<User[]> => {
+  if (usePostgres) {
+    // This would be implemented in postgresService
+    return []; // Placeholder
+  }
+  
+  const users = localStorage.getItem('users');
+  return users ? JSON.parse(users) : [];
+};
+
+export const saveUsers = async (users: User[]): Promise<void> => {
+  if (usePostgres) {
+    console.log('Would update users in PostgreSQL');
+    return;
+  }
+  
+  localStorage.setItem('users', JSON.stringify(users));
+};
+
+// Company Settings
+export const getCompanySettings = async (): Promise<CompanySettings | null> => {
+  if (usePostgres) {
+    // This would be implemented in postgresService
+    return null; // Placeholder
+  }
+  
+  const settings = localStorage.getItem('company_settings');
+  return settings ? JSON.parse(settings) : null;
+};
+
+export const saveCompanySettings = async (settings: CompanySettings): Promise<void> => {
+  if (usePostgres) {
+    console.log('Would update company settings in PostgreSQL');
+    return;
+  }
+  
+  localStorage.setItem('company_settings', JSON.stringify(settings));
+};
+
+// Stock History
+export const getStockHistory = async (productId?: string): Promise<StockHistoryRecord[]> => {
+  if (usePostgres && productId) {
+    return postgresService.getStockHistoryByProduct(productId);
+  } else if (usePostgres) {
+    // Get all stock history - this would be implemented in postgresService
+    return []; // Placeholder
+  }
+  
+  const history = localStorage.getItem('stock_history');
+  const records = history ? JSON.parse(history) : [];
+  
+  if (productId) {
+    return records.filter((record: StockHistoryRecord) => record.productId === productId);
+  }
+  
+  return records;
+};
 
 export const updateProductStock = async (
   productId: string, 
@@ -90,7 +212,37 @@ export const updateProductStock = async (
     return true;
   }
   
-  // ... keep existing localStorage implementation
+  // For localStorage implementation
+  const productsStr = localStorage.getItem('products');
+  if (!productsStr) return false;
+  
+  const products = JSON.parse(productsStr);
+  const productIndex = products.findIndex((p: Product) => p.id === productId);
+  
+  if (productIndex === -1) return false;
+  
+  const previousStock = products[productIndex].stock;
+  products[productIndex].stock = newStock;
+  products[productIndex].updatedAt = new Date();
+  
+  localStorage.setItem('products', JSON.stringify(products));
+  
+  // Record stock history
+  const stockHistory = JSON.parse(localStorage.getItem('stock_history') || '[]');
+  stockHistory.unshift({
+    id: `sc${Date.now()}`,
+    productId,
+    productName: products[productIndex].name,
+    previousStock,
+    newStock,
+    changeAmount: newStock - previousStock,
+    userId,
+    userName,
+    timestamp: new Date(),
+    reason
+  });
+  
+  localStorage.setItem('stock_history', JSON.stringify(stockHistory));
+  
+  return true;
 };
-
-// ... keep remaining code

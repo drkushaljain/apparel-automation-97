@@ -117,6 +117,21 @@ export interface ActivityLog {
   timestamp: Date;
 }
 
+// Stock History Record
+export interface StockHistoryRecord {
+  id: string;
+  productId: string;
+  productName: string;
+  previousStock: number;
+  newStock: number;
+  changeAmount: number;
+  userId: string;
+  userName: string;
+  timestamp: Date;
+  reason: string;
+  updatedBy?: string;
+}
+
 // Sales Data
 export interface SalesData {
   day: string;
@@ -188,19 +203,4 @@ export interface CompanySettings {
     twitter?: string;
     linkedin?: string;
   };
-}
-
-// Stock History Record
-export interface StockHistoryRecord {
-  id: string;
-  productId: string;
-  productName: string;
-  previousStock: number;
-  newStock: number;
-  changeAmount: number;
-  userId: string;
-  userName: string;
-  timestamp: Date;
-  reason: string;
-  updatedBy?: string;
 }
