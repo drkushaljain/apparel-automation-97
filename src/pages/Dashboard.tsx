@@ -1,3 +1,4 @@
+
 import { useAppContext } from "@/contexts/AppContext";
 import MainLayout from "@/components/layout/MainLayout";
 import StatCard from "@/components/StatCard";
@@ -38,9 +39,15 @@ const Dashboard = () => {
   }).reverse();
 
   const ordersByDate = last30Days.map(date => {
-    const ordersOnDate = orders.filter(order => 
-      order.createdAt.toISOString().split('T')[0] === date
-    );
+    // Ensure we're working with proper Date objects by checking createdAt type
+    const ordersOnDate = orders.filter(order => {
+      // Ensure order.createdAt is a Date object
+      const createdAt = order.createdAt instanceof Date ? 
+        order.createdAt : 
+        new Date(order.createdAt);
+      
+      return createdAt.toISOString().split('T')[0] === date;
+    });
     
     return {
       date,
@@ -62,7 +69,12 @@ const Dashboard = () => {
 
   // Recent orders
   const recentOrders = [...orders]
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .sort((a, b) => {
+      // Ensure both are Date objects for comparison
+      const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+      const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+      return dateB.getTime() - dateA.getTime();
+    })
     .slice(0, 5);
 
   return (
