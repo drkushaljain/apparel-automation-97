@@ -72,6 +72,7 @@ interface AppContextType {
   deleteUser: (userId: string) => void;
   setCurrentUser: (user: User | null) => void;
   setCompanySettings: (settings: CompanySettings) => void;
+  updateCompanySettings: (settings: CompanySettings) => void;
   logActivity: (action: string, entityType: "order" | "product" | "customer" | "user" | "system", entityId?: string, details?: string) => void;
   formatDate: (date: Date | string) => string;
   updateProductStock: (productId: string, changeAmount: number, reason: string) => void;
@@ -432,6 +433,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     dispatch({ type: 'SET_COMPANY_SETTINGS', payload: settings });
     toast.success('Company settings updated successfully');
   };
+  
+  const updateCompanySettings = (settings: CompanySettings) => {
+    dispatch({ type: 'SET_COMPANY_SETTINGS', payload: settings });
+    toast.success('Company settings updated successfully');
+  };
 
   const logActivity = (action: string, entityType: "order" | "product" | "customer" | "user" | "system", entityId?: string, details?: string) => {
     if (!state.currentUser) return;
@@ -466,7 +472,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const setCurrentUser = (user: User | null) => {
-    setState(prev => ({ ...prev, currentUser: user }));
+    dispatch({ type: 'SET_CURRENT_USER', payload: user });
     
     if (user) {
       localStorage.setItem('current_user', JSON.stringify(user));
@@ -543,6 +549,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     deleteUser,
     setCurrentUser,
     setCompanySettings,
+    updateCompanySettings,
     logActivity,
     formatDate,
     updateProductStock

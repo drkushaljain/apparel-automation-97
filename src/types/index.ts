@@ -1,3 +1,4 @@
+
 // User roles
 export type UserRole = "admin" | "manager" | "employee";
 
@@ -187,4 +188,19 @@ export interface CompanySettings {
     twitter?: string;
     linkedin?: string;
   };
+}
+
+// Stock History Record
+export interface StockHistoryRecord {
+  id: string;
+  productId: string;
+  productName: string;
+  previousStock: number;
+  newStock: number;
+  changeAmount: number;
+  userId: string;
+  userName: string;
+  timestamp: Date;
+  reason: string;
+  updatedBy?: string;
 }

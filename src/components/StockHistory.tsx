@@ -56,7 +56,7 @@ const StockHistory = ({ history }: StockHistoryProps) => {
                 </Badge>
               </TableCell>
               <TableCell className="text-sm">{record.reason}</TableCell>
-              <TableCell className="text-sm">{record.updatedBy || "System"}</TableCell>
+              <TableCell className="text-sm">{record.updatedBy || record.userName || "System"}</TableCell>
             </TableRow>
           ))}
         </TableBody>

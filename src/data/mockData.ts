@@ -300,6 +300,7 @@ export const mockUsers: User[] = [
     name: "Admin User",
     email: "admin@example.com",
     role: "admin",
+    password: "password", // Added missing password field
     createdAt: new Date("2022-12-01"),
     updatedAt: new Date("2022-12-01"),
     active: true,
@@ -310,6 +311,7 @@ export const mockUsers: User[] = [
     name: "Manager User",
     email: "manager@example.com",
     role: "manager",
+    password: "password", // Added missing password field
     createdAt: new Date("2023-01-15"),
     updatedAt: new Date("2023-01-15"),
     active: true,
@@ -320,6 +322,7 @@ export const mockUsers: User[] = [
     name: "Staff User",
     email: "staff@example.com",
     role: "employee", // Employee role (corrected from "staff")
+    password: "password", // Added missing password field
     createdAt: new Date("2023-02-10"),
     updatedAt: new Date("2023-02-10"),
     active: true,
