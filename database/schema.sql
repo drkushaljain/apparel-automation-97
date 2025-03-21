@@ -18,6 +18,16 @@ CREATE TABLE IF NOT EXISTS products (
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- Customer Categories Table
+CREATE TABLE IF NOT EXISTS customer_categories (
+  id VARCHAR(50) PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  color VARCHAR(50),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
 -- Customers Table
 CREATE TABLE IF NOT EXISTS customers (
   id VARCHAR(50) PRIMARY KEY,
@@ -29,6 +39,7 @@ CREATE TABLE IF NOT EXISTS customers (
   city VARCHAR(100) NOT NULL,
   state VARCHAR(100) NOT NULL,
   pincode VARCHAR(20) NOT NULL,
+  category VARCHAR(50) REFERENCES customer_categories(id) ON DELETE SET NULL,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -95,6 +106,7 @@ CREATE TABLE IF NOT EXISTS company_settings (
   pincode VARCHAR(20),
   website VARCHAR(255),
   tax_id VARCHAR(100),
+  app_name VARCHAR(100),
   social_media JSONB,
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -144,10 +156,21 @@ INSERT INTO users (
   NOW()
 ) ON CONFLICT (id) DO NOTHING;
 
+-- Insert some default customer categories
+INSERT INTO customer_categories (
+  id, name, description, color, created_at, updated_at
+) VALUES
+  ('cc1', 'Regular', 'Regular customers', '#3B82F6', NOW(), NOW()),
+  ('cc2', 'VIP', 'VIP customers with special privileges', '#EF4444', NOW(), NOW()),
+  ('cc3', 'Wholesale', 'Wholesale customers', '#10B981', NOW(), NOW()),
+  ('cc4', 'New', 'New customers', '#F59E0B', NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
 -- Add indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_products_name ON products(name);
 CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name);
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
+CREATE INDEX IF NOT EXISTS idx_customers_category ON customers(category);
 CREATE INDEX IF NOT EXISTS idx_orders_customer_id ON orders(customer_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
