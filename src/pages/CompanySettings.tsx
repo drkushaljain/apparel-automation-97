@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { useAppContext } from "@/contexts/AppContext";
@@ -150,15 +149,23 @@ const CompanySettings = () => {
     setIsLoading(true);
     
     try {
+      // Create a copy of the current user with updated information
       const updatedUser = {
         ...currentUser,
         name: userName,
         email: userEmail,
         phone: userPhone,
-        ...(userPassword ? { password: userPassword } : {})
       };
       
+      // Only update password if a new one was provided
+      if (userPassword) {
+        updatedUser.password = userPassword;
+      }
+      
+      // Update the user in the app context
       updateUser(updatedUser);
+      
+      // Reset password fields
       setUserPassword("");
       setUserConfirmPassword("");
       
