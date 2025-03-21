@@ -1,4 +1,3 @@
-
 // User roles
 export type UserRole = "admin" | "manager" | "employee";
 
@@ -188,16 +187,17 @@ export interface SalesStats {
 // Company Settings
 export interface CompanySettings {
   name: string;
-  logo?: string;
   email: string;
   phone: string;
   address: string;
   city: string;
   state: string;
   pincode: string;
+  logo?: string;
   website?: string;
   taxId?: string;
-  socialMedia?: {
+  appName?: string;
+  socialMedia: {
     facebook?: string;
     instagram?: string;
     twitter?: string;

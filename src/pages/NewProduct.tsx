@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Upload } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const NewProduct = () => {
   const { addProduct } = useAppContext();
@@ -19,21 +20,55 @@ const NewProduct = () => {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState<number>(0);
   const [imageUrl, setImageUrl] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
   const [category, setCategory] = useState("");
   const [isAvailable, setIsAvailable] = useState(true);
   const [sku, setSku] = useState("");
   const [taxPercentage, setTaxPercentage] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("url");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setImagePreview(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    
+    let finalImageUrl = imageUrl;
+    
+    // If using file upload, convert to base64
+    if (activeTab === "upload" && imageFile) {
+      const reader = new FileReader();
+      finalImageUrl = await new Promise<string>((resolve) => {
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            resolve(event.target.result as string);
+          }
+        };
+        reader.readAsDataURL(imageFile);
+      });
+    }
     
     addProduct({
       name,
       description,
       price,
-      imageUrl,
+      imageUrl: finalImageUrl,
       category,
       isAvailable,
       sku,
@@ -129,15 +164,71 @@ const NewProduct = () => {
                   />
                 </div>
               </div>
+              
               <div className="space-y-2">
-                <Label htmlFor="imageUrl">Image URL</Label>
-                <Input
-                  id="imageUrl"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="Enter image URL"
-                />
+                <Label>Product Image</Label>
+                <Tabs 
+                  defaultValue="url" 
+                  value={activeTab} 
+                  onValueChange={setActiveTab}
+                  className="w-full"
+                >
+                  <TabsList className="grid grid-cols-2 mb-4">
+                    <TabsTrigger value="url">Image URL</TabsTrigger>
+                    <TabsTrigger value="upload">Upload Image</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="url" className="space-y-2">
+                    <Input
+                      id="imageUrl"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      placeholder="Enter image URL"
+                    />
+                    {imageUrl && (
+                      <div className="mt-2 border rounded-md p-2 max-w-xs">
+                        <img 
+                          src={imageUrl} 
+                          alt="Product Preview" 
+                          className="max-h-40 object-contain mx-auto"
+                          onError={(e) => {
+                            e.currentTarget.src = "https://placehold.co/300x300?text=Invalid+Image";
+                          }}
+                        />
+                      </div>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="upload" className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                      <Button 
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById("image-upload")?.click()}
+                        className="w-full"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Choose Image File
+                      </Button>
+                    </div>
+                    {imagePreview && (
+                      <div className="mt-2 border rounded-md p-2 max-w-xs">
+                        <img 
+                          src={imagePreview} 
+                          alt="Product Preview" 
+                          className="max-h-40 object-contain mx-auto"
+                        />
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </div>
+              
               <div className="flex items-center space-x-2">
                 <Switch
                   id="isAvailable"

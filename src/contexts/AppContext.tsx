@@ -349,6 +349,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
     
     dispatch({ type: 'ADD_ORDER', payload: newOrder });
+    
+    newOrder.items.forEach(item => {
+      const product = state.products.find(p => p.id === item.productId);
+      if (product) {
+        const newStock = Math.max(0, product.stock - item.quantity);
+        updateProductStock(product.id, -(item.quantity), `Order ${newOrder.id} placed`);
+      }
+    });
+    
     toast.success('Order added successfully');
   };
 
@@ -569,4 +578,3 @@ export const useAppContext = (): AppContextType => {
   }
   return context;
 };
-

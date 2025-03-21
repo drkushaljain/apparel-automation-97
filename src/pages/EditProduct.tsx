@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const EditProduct = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,12 +22,15 @@ const EditProduct = () => {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState<number>(0);
   const [imageUrl, setImageUrl] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
   const [category, setCategory] = useState("");
   const [stock, setStock] = useState<number>(0);
   const [sku, setSku] = useState("");
   const [isAvailable, setIsAvailable] = useState(true);
   const [taxPercentage, setTaxPercentage] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("url");
 
   useEffect(() => {
     if (id) {
@@ -36,6 +40,15 @@ const EditProduct = () => {
         setDescription(product.description || "");
         setPrice(product.price);
         setImageUrl(product.imageUrl || "");
+        if (product.imageUrl) {
+          // If image starts with data:, it's an uploaded image
+          if (product.imageUrl.startsWith('data:')) {
+            setActiveTab("upload");
+            setImagePreview(product.imageUrl);
+          } else {
+            setActiveTab("url");
+          }
+        }
         setCategory(product.category || "");
         setStock(product.stock);
         setSku(product.sku || "");
@@ -48,7 +61,23 @@ const EditProduct = () => {
     }
   }, [id, state.products, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setImagePreview(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!id) {
@@ -64,12 +93,31 @@ const EditProduct = () => {
     
     setIsLoading(true);
     
+    let finalImageUrl = imageUrl;
+    
+    // If using file upload, convert to base64
+    if (activeTab === "upload") {
+      if (imageFile) {
+        const reader = new FileReader();
+        finalImageUrl = await new Promise<string>((resolve) => {
+          reader.onload = (event) => {
+            if (event.target?.result) {
+              resolve(event.target.result as string);
+            }
+          };
+          reader.readAsDataURL(imageFile);
+        });
+      } else if (imagePreview) {
+        finalImageUrl = imagePreview;
+      }
+    }
+    
     updateProduct({
       ...product,
       name,
       description,
       price,
-      imageUrl,
+      imageUrl: finalImageUrl,
       category,
       stock,
       sku,
@@ -179,29 +227,83 @@ const EditProduct = () => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="imageUrl">Image URL</Label>
-                  <Input
-                    id="imageUrl"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="Enter image URL"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="taxPercentage">Tax Percentage (%)</Label>
-                  <Input
-                    id="taxPercentage"
-                    type="number"
-                    value={taxPercentage}
-                    onChange={(e) => setTaxPercentage(Number(e.target.value))}
-                    placeholder="0"
-                    min="0"
-                    max="100"
-                  />
-                </div>
+              
+              <div className="space-y-2">
+                <Label>Product Image</Label>
+                <Tabs 
+                  value={activeTab} 
+                  onValueChange={setActiveTab}
+                  className="w-full"
+                >
+                  <TabsList className="grid grid-cols-2 mb-4">
+                    <TabsTrigger value="url">Image URL</TabsTrigger>
+                    <TabsTrigger value="upload">Upload Image</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="url" className="space-y-2">
+                    <Input
+                      id="imageUrl"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      placeholder="Enter image URL"
+                    />
+                    {imageUrl && (
+                      <div className="mt-2 border rounded-md p-2 max-w-xs">
+                        <img 
+                          src={imageUrl} 
+                          alt="Product Preview" 
+                          className="max-h-40 object-contain mx-auto"
+                          onError={(e) => {
+                            e.currentTarget.src = "https://placehold.co/300x300?text=Invalid+Image";
+                          }}
+                        />
+                      </div>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="upload" className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                      <Button 
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById("image-upload")?.click()}
+                        className="w-full"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Choose Image File
+                      </Button>
+                    </div>
+                    {(imagePreview || imageFile) && (
+                      <div className="mt-2 border rounded-md p-2 max-w-xs">
+                        <img 
+                          src={imagePreview} 
+                          alt="Product Preview" 
+                          className="max-h-40 object-contain mx-auto"
+                        />
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="taxPercentage">Tax Percentage (%)</Label>
+                <Input
+                  id="taxPercentage"
+                  type="number"
+                  value={taxPercentage}
+                  onChange={(e) => setTaxPercentage(Number(e.target.value))}
+                  placeholder="0"
+                  min="0"
+                  max="100"
+                />
+              </div>
+              
               <div className="flex items-center space-x-2">
                 <Switch
                   id="isAvailable"
