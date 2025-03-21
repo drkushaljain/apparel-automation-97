@@ -1,39 +1,77 @@
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, FileDown } from "lucide-react";
+import { Search, Plus, FileDown, Filter, Tag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import NoContent from "@/components/NoContent";
 import { Users } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { CustomerCategory } from "@/types";
 
 const Customers = () => {
   const { state } = useAppContext();
-  const { customers, isLoading } = state;
+  const { customers, orders, isLoading } = state;
   const navigate = useNavigate();
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [categories, setCategories] = useState<CustomerCategory[]>([]);
+
+  // Load categories
+  useEffect(() => {
+    const savedCategories = localStorage.getItem("customer_categories");
+    if (savedCategories) {
+      setCategories(JSON.parse(savedCategories));
+    }
+  }, []);
+
+  // Get category name by ID
+  const getCategoryName = (categoryId: string) => {
+    const category = categories.find(cat => cat.id === categoryId);
+    return category ? category.name : "Default";
+  };
+
+  // Calculate total purchase value per customer
+  const customersPurchaseValues = useMemo(() => {
+    return customers.reduce((result, customer) => {
+      const customerOrders = orders.filter(order => order.customerId === customer.id);
+      const totalValue = customerOrders.reduce((sum, order) => sum + order.totalAmount, 0);
+      result[customer.id] = totalValue;
+      return result;
+    }, {} as Record<string, number>);
+  }, [customers, orders]);
 
   // Filtered customers
   const filteredCustomers = useMemo(() => {
-    return customers.filter(customer => 
-      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.phone.includes(searchTerm) ||
-      customer.whatsapp.includes(searchTerm) ||
-      (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      customer.city.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [customers, searchTerm]);
+    return customers.filter(customer => {
+      // First filter by category if selected
+      if (selectedCategory && customer.category !== selectedCategory) {
+        return false;
+      }
+      
+      // Then filter by search term
+      return (
+        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.phone.includes(searchTerm) ||
+        customer.whatsapp.includes(searchTerm) ||
+        (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        customer.city.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    });
+  }, [customers, searchTerm, selectedCategory]);
 
   // Export customers to CSV
   const exportToCSV = () => {
     // Define the CSV headers
     const headers = [
+      "SN",
       "ID",
       "Name",
       "Phone",
@@ -43,11 +81,14 @@ const Customers = () => {
       "City",
       "State",
       "Pincode",
-      "Orders Count"
+      "Category",
+      "Orders Count",
+      "Total Purchase Value"
     ];
     
     // Convert customers to CSV rows
-    const rows = filteredCustomers.map(customer => [
+    const rows = filteredCustomers.map((customer, index) => [
+      index + 1,
       customer.id,
       customer.name,
       customer.phone,
@@ -57,7 +98,9 @@ const Customers = () => {
       customer.city,
       customer.state,
       customer.pincode,
-      customer.orders.length
+      getCategoryName(customer.category || ""),
+      customer.orders.length,
+      customersPurchaseValues[customer.id] || 0
     ]);
     
     // Combine headers and rows
@@ -102,6 +145,10 @@ const Customers = () => {
             >
               <FileDown className="h-4 w-4" />
             </Button>
+            <Button onClick={() => navigate("/customer-categories")} variant="outline">
+              <Tag className="h-4 w-4 mr-2" />
+              Manage Categories
+            </Button>
             <Button onClick={() => navigate("/customers/new")}>
               <Plus className="h-4 w-4 mr-2" />
               New Customer
@@ -109,17 +156,38 @@ const Customers = () => {
           </div>
         </div>
 
-        {/* Search */}
+        {/* Search and Filter */}
         <Card>
           <CardContent className="pt-6">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search customers..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-              />
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search customers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+              
+              <div className="w-full sm:w-64">
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger>
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4" />
+                      <SelectValue placeholder="Filter by category" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Categories</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -147,16 +215,20 @@ const Customers = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">SN</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Phone/WhatsApp</TableHead>
                       <TableHead>Location</TableHead>
+                      <TableHead>Category</TableHead>
                       <TableHead className="text-right">Orders</TableHead>
+                      <TableHead className="text-right">Total Value</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredCustomers.map((customer) => (
+                    {filteredCustomers.map((customer, index) => (
                       <TableRow key={customer.id}>
+                        <TableCell>{index + 1}</TableCell>
                         <TableCell className="font-medium">{customer.name}</TableCell>
                         <TableCell>
                           <div className="space-y-1">
@@ -167,7 +239,17 @@ const Customers = () => {
                         <TableCell>
                           {customer.city}, {customer.state}
                         </TableCell>
+                        <TableCell>
+                          {customer.category ? (
+                            <Badge variant="outline" className="bg-primary/10">
+                              {getCategoryName(customer.category)}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">Default</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">{customer.orders.length}</TableCell>
+                        <TableCell className="text-right">₹{(customersPurchaseValues[customer.id] || 0).toLocaleString()}</TableCell>
                         <TableCell className="text-right">
                           <Button
                             variant="ghost"

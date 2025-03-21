@@ -1,3 +1,4 @@
+
 // User roles
 export type UserRole = "admin" | "manager" | "employee";
 
@@ -45,6 +46,14 @@ export interface Product {
   updatedAt: Date;
 }
 
+// Customer Category
+export interface CustomerCategory {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+}
+
 // Customer
 export interface Customer {
   id: string;
@@ -56,6 +65,7 @@ export interface Customer {
   city: string;
   state: string;
   pincode: string;
+  category?: string;
   createdAt: Date;
   updatedAt: Date;
   orders: string[]; // Array of order IDs

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import { useAppContext } from "@/contexts/AppContext";
@@ -8,7 +8,9 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Plus } from "lucide-react";
+import { CustomerCategory } from "@/types";
 
 const NewCustomer = () => {
   const { addCustomer } = useAppContext();
@@ -22,7 +24,17 @@ const NewCustomer = () => {
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [pincode, setPincode] = useState("");
+  const [category, setCategory] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [categories, setCategories] = useState<CustomerCategory[]>([]);
+
+  useEffect(() => {
+    // Load customer categories from localStorage
+    const savedCategories = localStorage.getItem("customer_categories");
+    if (savedCategories) {
+      setCategories(JSON.parse(savedCategories));
+    }
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +48,8 @@ const NewCustomer = () => {
       address,
       city,
       state,
-      pincode
+      pincode,
+      category: category || undefined
     });
     
     setIsLoading(false);
@@ -99,6 +112,27 @@ const NewCustomer = () => {
                   onChange={(e) => setWhatsapp(e.target.value)}
                   placeholder="Enter WhatsApp number"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category">Customer Category</Label>
+                <div className="flex gap-2">
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Default</SelectItem>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="outline" size="icon" onClick={() => navigate("/customer-categories")}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="address">Address</Label>

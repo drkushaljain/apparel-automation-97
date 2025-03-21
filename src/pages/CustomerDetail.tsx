@@ -1,25 +1,40 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, ExternalLink, Mail, MapPin, Phone } from "lucide-react";
+import { ArrowLeft, ExternalLink, Mail, MapPin, Phone, Tag } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
+import { CustomerCategory } from "@/types";
 
 const CustomerDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { state } = useAppContext();
   const { customers, orders } = state;
+  const [category, setCategory] = useState<CustomerCategory | null>(null);
 
   // Find the customer
   const customer = customers.find(c => c.id === id);
   
   // Find customer's orders
   const customerOrders = orders.filter(order => order.customerId === id);
+  
+  // Calculate total purchase value
+  const totalPurchaseValue = customerOrders.reduce((sum, order) => sum + order.totalAmount, 0);
+
+  useEffect(() => {
+    if (customer?.category) {
+      const savedCategories = JSON.parse(localStorage.getItem("customer_categories") || "[]");
+      const foundCategory = savedCategories.find((cat: CustomerCategory) => cat.id === customer.category);
+      if (foundCategory) {
+        setCategory(foundCategory);
+      }
+    }
+  }, [customer]);
 
   if (!customer) {
     return (
@@ -54,6 +69,12 @@ const CustomerDetail = () => {
               <CardTitle>Customer Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {category && (
+                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                  <Tag className="h-3 w-3 mr-1" />
+                  {category.name}
+                </div>
+              )}
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-muted-foreground" />
@@ -79,6 +100,19 @@ const CustomerDetail = () => {
                     <p>
                       {customer.city}, {customer.state} - {customer.pincode}
                     </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Orders</p>
+                    <p className="text-2xl font-bold">{customerOrders.length}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Purchase</p>
+                    <p className="text-2xl font-bold">₹{totalPurchaseValue.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
