@@ -1,6 +1,6 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import MainLayout from "@/components/layout/MainLayout";
 import { useAppContext } from "@/contexts/AppContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { toast } from "sonner";
 import { ArrowLeft, Download, FileText, TrendingUp, PieChart as PieChartIcon } from "lucide-react";
 import { UserRole } from "@/types";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 const exportToCSV = (data: any[], filename: string) => {
   const headers = Object.keys(data[0]).join(',');
@@ -210,175 +211,197 @@ const RevenueReport = () => {
     }
   };
   
-  const handleSendBulkMessage = () => {
-    const eligibleCustomers = getEligibleCustomers();
-    
-    if (eligibleCustomers.length === 0) {
-      toast.error("No customers found matching the selected criteria");
-      return;
-    }
-    
-    setIsSending(true);
-    
-    setTimeout(() => {
-      setIsSending(false);
-      toast.success(`Bulk message sent to ${eligibleCustomers.length} customers`);
-    }, 2000);
-    
-    console.log(`Sending message to ${eligibleCustomers.length} customers`);
-    console.log("Message:", bulkMessageText);
-    console.log("Customers:", eligibleCustomers);
-  };
-  
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
   return (
-    <MainLayout>
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="h-4 w-4" />
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <h1 className="text-2xl font-bold tracking-tight ml-2">Revenue Report</h1>
+      </div>
+      
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        <DatePickerWithRange date={date} setDate={setDate} />
+        
+        <div className="flex flex-wrap gap-2">
+          <Select value={chartType} onValueChange={(value) => setChartType(value as any)}>
+            <SelectTrigger className="w-[150px] sm:w-40">
+              <SelectValue placeholder="Chart Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="daily">Daily Sales</SelectItem>
+              <SelectItem value="category">By Category</SelectItem>
+              <SelectItem value="product">Top Products</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Button variant="outline" onClick={handleExportCSV} className="whitespace-nowrap">
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
           </Button>
-          <h1 className="text-2xl font-bold tracking-tight ml-2">Revenue Report</h1>
         </div>
-        
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          <DatePickerWithRange date={date} setDate={setDate} />
-          
-          <div className="flex gap-2">
-            <Select value={chartType} onValueChange={(value) => setChartType(value as any)}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Chart Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="daily">Daily Sales</SelectItem>
-                <SelectItem value="category">By Category</SelectItem>
-                <SelectItem value="product">Top Products</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Button variant="outline" onClick={handleExportCSV}>
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
-            </Button>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Revenue</p>
-                  <h2 className="text-2xl font-bold">₹{summary.totalRevenue.toLocaleString()}</h2>
-                </div>
-                <TrendingUp className="h-5 w-5 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm text-muted-foreground">Orders</p>
-                  <h2 className="text-2xl font-bold">{summary.totalOrders}</h2>
-                </div>
-                <FileText className="h-5 w-5 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm text-muted-foreground">Avg. Order Value</p>
-                  <h2 className="text-2xl font-bold">
-                    ₹{summary.averageOrderValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </h2>
-                </div>
-                <PieChartIcon className="h-5 w-5 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-6">
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="pt-6">
+            <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm text-muted-foreground">Top Category</p>
-                <h2 className="text-xl font-bold truncate">{summary.topSellingCategory}</h2>
+                <p className="text-sm text-muted-foreground">Total Revenue</p>
+                <h2 className="text-2xl font-bold">₹{summary.totalRevenue.toLocaleString()}</h2>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+              <TrendingUp className="h-5 w-5 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {chartType === "daily" ? "Daily Sales" : 
-               chartType === "category" ? "Sales by Category" : 
-               "Top Selling Products"}
-            </CardTitle>
-            <CardDescription>
-              {date?.from && date?.to 
-                ? `${format(date.from, 'PPP')} to ${format(date.to, 'PPP')}`
-                : "Please select a date range"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              {chartType === "daily" && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={salesData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`₹${value}`, 'Revenue']} />
-                    <Bar dataKey="amount" fill="#8884d8" />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-              
-              {chartType === "category" && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={categoryData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={true}
-                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {categoryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [`₹${value}`, 'Revenue']} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              )}
-              
-              {chartType === "product" && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={productData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis type="category" dataKey="name" width={150} />
-                    <Tooltip formatter={(value) => [`₹${value}`, 'Revenue']} />
-                    <Bar dataKey="value" fill="#82ca9d" />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="pt-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-sm text-muted-foreground">Orders</p>
+                <h2 className="text-2xl font-bold">{summary.totalOrders}</h2>
+              </div>
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="pt-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-sm text-muted-foreground">Avg. Order Value</p>
+                <h2 className="text-2xl font-bold">
+                  ₹{summary.averageOrderValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </h2>
+              </div>
+              <PieChartIcon className="h-5 w-5 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="pt-6">
+            <div>
+              <p className="text-sm text-muted-foreground">Top Category</p>
+              <h2 className="text-xl font-bold truncate">{summary.topSellingCategory}</h2>
             </div>
           </CardContent>
         </Card>
       </div>
-    </MainLayout>
+      
+      <Card className="hover:shadow-md transition-shadow">
+        <CardHeader>
+          <CardTitle>
+            {chartType === "daily" ? "Daily Sales" : 
+             chartType === "category" ? "Sales by Category" : 
+             "Top Selling Products"}
+          </CardTitle>
+          <CardDescription>
+            {date?.from && date?.to 
+              ? `${format(date.from, 'PPP')} to ${format(date.to, 'PPP')}`
+              : "Please select a date range"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px] md:h-[400px]">
+            {chartType === "daily" && (
+              <ChartContainer
+                config={{
+                  amount: { theme: { light: "#8884d8", dark: "#a5b4fc" } },
+                }}
+                className="h-full w-full"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={salesData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis 
+                      dataKey="date" 
+                      tick={{ fontSize: 12 }}
+                      interval={Math.min(5, Math.floor(salesData.length / 5) || 0)}
+                    />
+                    <YAxis width={60} tickFormatter={(value) => `₹${value.toLocaleString()}`} />
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(value) => [`₹${(value as number).toLocaleString()}`, "Revenue"]}
+                        />
+                      }
+                    />
+                    <Bar dataKey="amount" fill="var(--color-amount)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            )}
+            
+            {chartType === "category" && (
+              <ResponsiveContainer width="100%" height="100%" className="mx-auto max-w-[600px]">
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={90}
+                    fill="#8884d8"
+                    paddingAngle={1}
+                    dataKey="value"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  >
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [`₹${(value as number).toLocaleString()}`, 'Revenue']} />
+                  <Legend layout="horizontal" verticalAlign="bottom" align="center" />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+            
+            {chartType === "product" && (
+              <ChartContainer
+                config={{
+                  value: { theme: { light: "#82ca9d", dark: "#6ee7b7" } },
+                }}
+                className="h-full w-full"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart 
+                    data={productData} 
+                    layout="vertical"
+                    margin={{ top: 20, right: 20, bottom: 20, left: 100 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                    <XAxis 
+                      type="number" 
+                      tickFormatter={(value) => `₹${value.toLocaleString()}`}
+                    />
+                    <YAxis 
+                      type="category" 
+                      dataKey="name" 
+                      width={90}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(value) => [`₹${(value as number).toLocaleString()}`, "Revenue"]}
+                        />
+                      }
+                    />
+                    <Bar dataKey="value" fill="var(--color-value)" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

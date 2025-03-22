@@ -1,13 +1,15 @@
+
 import { useAppContext } from "@/contexts/AppContext";
 import StatCard from "@/components/StatCard";
 import StatusBadge from "@/components/StatusBadge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import { ShoppingBag, Users, DollarSign, Clock, Package, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import StockLogsDashboard from "@/components/dashboard/StockLogsDashboard";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 const Dashboard = () => {
   const { state } = useAppContext();
@@ -113,79 +115,125 @@ const Dashboard = () => {
       {/* Charts & Tables */}
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
         {/* Sales Chart */}
-        <Card className="col-span-1 lg:col-span-2">
+        <Card className="col-span-1 lg:col-span-2 hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle>Sales Overview</CardTitle>
             <CardDescription>Order count and revenue for the last 30 days</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={ordersByDate}
-                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="displayDate" 
-                    tick={{ fontSize: 12 }}
-                    interval={Math.floor(ordersByDate.length / 10)}
-                  />
-                  <YAxis yAxisId="left" orientation="left" stroke="#666" />
-                  <YAxis yAxisId="right" orientation="right" stroke="#666" />
-                  <Tooltip 
-                    formatter={(value, name) => [
-                      name === 'revenue' ? `₹${value}` : value,
-                      name === 'revenue' ? 'Revenue' : 'Orders'
-                    ]}
-                  />
-                  <Bar yAxisId="left" dataKey="orders" fill="#3B82F6" name="Orders" radius={[4, 4, 0, 0]} />
-                  <Bar yAxisId="right" dataKey="revenue" fill="#10B981" name="Revenue" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <ChartContainer
+                config={{
+                  orders: { theme: { light: "#3B82F6", dark: "#93c5fd" } },
+                  revenue: { theme: { light: "#10B981", dark: "#6ee7b7" } },
+                }}
+                className="h-full w-full"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={ordersByDate}
+                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis 
+                      dataKey="displayDate" 
+                      tick={{ fontSize: 12 }}
+                      interval={Math.min(7, Math.floor(ordersByDate.length / 8) || 0)}
+                    />
+                    <YAxis 
+                      yAxisId="left" 
+                      orientation="left" 
+                      stroke="#666" 
+                      width={40}
+                      tickFormatter={(value) => `${value}`}
+                    />
+                    <YAxis 
+                      yAxisId="right" 
+                      orientation="right" 
+                      stroke="#666" 
+                      width={60}
+                      tickFormatter={(value) => `₹${value.toLocaleString()}`}
+                    />
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(value, name) => [
+                            name === 'revenue' ? `₹${(value as number).toLocaleString()}` : value,
+                            name === 'revenue' ? 'Revenue' : 'Orders'
+                          ]}
+                        />
+                      }
+                    />
+                    <Bar yAxisId="left" dataKey="orders" fill="var(--color-orders)" name="Orders" radius={[4, 4, 0, 0]} />
+                    <Bar yAxisId="right" dataKey="revenue" fill="var(--color-revenue)" name="Revenue" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
             </div>
           </CardContent>
         </Card>
 
         {/* Order Status */}
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle>Order Status</CardTitle>
             <CardDescription>Distribution of orders by status</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {statusDistribution.map((status) => (
-                <div key={status.name} className="flex items-center">
-                  <div className="flex-1">
-                    <div className="flex items-center">
-                      <div 
-                        className="w-3 h-3 rounded-full mr-2"
-                        style={{ backgroundColor: status.color }}
-                      ></div>
-                      <span>{status.name}</span>
+            <div className="flex flex-col md:flex-row items-center gap-4">
+              <div className="w-full md:w-1/2 h-40 md:h-auto">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusDistribution}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={30}
+                      outerRadius={50}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {statusDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value}`, 'Orders']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-3 w-full md:w-1/2">
+                {statusDistribution.map((status) => (
+                  <div key={status.name} className="flex items-center">
+                    <div className="flex-1">
+                      <div className="flex items-center">
+                        <div 
+                          className="w-3 h-3 rounded-full mr-2"
+                          style={{ backgroundColor: status.color }}
+                        ></div>
+                        <span className="text-sm">{status.name}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="w-full max-w-[60%]">
-                    <div className="relative h-4 w-full bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full rounded-full" 
-                        style={{ 
-                          width: `${totalOrders > 0 ? (status.value / totalOrders) * 100 : 0}%`,
-                          backgroundColor: status.color 
-                        }}
-                      ></div>
+                    <div className="w-full max-w-[60%]">
+                      <div className="relative h-3 w-full bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full rounded-full" 
+                          style={{ 
+                            width: `${totalOrders > 0 ? (status.value / totalOrders) * 100 : 0}%`,
+                            backgroundColor: status.color 
+                          }}
+                        ></div>
+                      </div>
                     </div>
+                    <div className="w-8 text-right ml-2 text-sm">{status.value}</div>
                   </div>
-                  <div className="w-10 text-right ml-2">{status.value}</div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Recent Orders */}
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle>Recent Orders</CardTitle>
             <CardDescription>Latest customer orders</CardDescription>
@@ -196,7 +244,7 @@ const Dashboard = () => {
                 <p className="text-muted-foreground text-center py-4">No recent orders</p>
               ) : (
                 recentOrders.map((order) => (
-                  <div key={order.id} className="flex items-center justify-between">
+                  <div key={order.id} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-lg transition-colors">
                     <div className="space-y-1">
                       <p className="font-medium">{order.customer.name}</p>
                       <div className="flex items-center text-sm text-muted-foreground">
@@ -225,7 +273,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Stock Changes */}
-        <div className="col-span-12 md:col-span-4">
+        <div className="col-span-1 lg:col-span-1">
           <StockLogsDashboard />
         </div>
       </div>

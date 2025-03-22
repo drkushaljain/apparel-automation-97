@@ -23,7 +23,7 @@ const NewCustomer = () => {
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [pincode, setPincode] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState("default");
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState<CustomerCategory[]>([]);
 
@@ -48,7 +48,7 @@ const NewCustomer = () => {
       city,
       state,
       pincode,
-      category: category || undefined
+      category: category !== "default" ? category : undefined
     });
     
     setIsLoading(false);
@@ -65,7 +65,7 @@ const NewCustomer = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle>Customer Information</CardTitle>
           </CardHeader>
@@ -143,7 +143,7 @@ const NewCustomer = () => {
                 required
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="city">City</Label>
                 <Input
@@ -164,7 +164,7 @@ const NewCustomer = () => {
                   required
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 sm:col-span-2 md:col-span-1">
                 <Label htmlFor="pincode">PIN Code</Label>
                 <Input
                   id="pincode"
@@ -176,11 +176,11 @@ const NewCustomer = () => {
               </div>
             </div>
           </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button type="button" variant="outline" onClick={() => navigate("/customers")}>
+          <CardFooter className="flex flex-col sm:flex-row justify-between gap-2">
+            <Button type="button" variant="outline" onClick={() => navigate("/customers")} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || !name || !phone || !address}>
+            <Button type="submit" disabled={isLoading || !name || !phone || !address} className="w-full sm:w-auto">
               Add Customer
             </Button>
           </CardFooter>

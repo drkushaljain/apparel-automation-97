@@ -47,6 +47,13 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     }
   }, [currentUser]);
 
+  // Close sidebar automatically when in mobile view and route changes
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname, isMobile]);
+
   const navigation = [
     {
       name: "Dashboard",
@@ -118,7 +125,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           variant="outline"
           size="icon"
           onClick={toggleSidebar}
-          className="rounded-full"
+          className="rounded-full shadow-md"
         >
           {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </Button>
@@ -127,7 +134,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       {/* Sidebar backdrop for mobile */}
       {isMobile && sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/30 z-30"
+          className="fixed inset-0 bg-black/30 z-30 backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -135,7 +142,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-30 w-64 bg-card border-r transform transition-transform duration-200 ease-in-out",
+          "fixed inset-y-0 left-0 z-30 w-64 bg-card border-r shadow-md transform transition-transform duration-200 ease-in-out",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
           "md:translate-x-0 md:static"
         )}
@@ -161,7 +168,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           )}
 
           {/* Navigation */}
-          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin">
             {navigation
               .filter(item => item.roles.includes(userRole)) // Filter navigation items by user role
               .map((item) => (
@@ -198,8 +205,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen">
-        <main className="flex-1 p-6 overflow-y-auto animate-fade-in">
+      <div className="flex-1 flex flex-col min-h-screen w-full">
+        <main className="flex-1 p-4 md:p-6 overflow-y-auto animate-fade-in">
           {children}
         </main>
         <footer className="p-4 border-t text-center text-sm text-muted-foreground">

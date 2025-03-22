@@ -26,6 +26,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import { useAppContext } from "@/contexts/AppContext";
 import { Navigate } from "react-router-dom";
 import "./App.css";
+import "./components/styles/scroll.css";
 
 // Auth guard component to protect routes
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
