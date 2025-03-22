@@ -50,7 +50,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const navigation = [
     {
       name: "Dashboard",
-      href: "/",
+      href: "/dashboard",
       icon: BarChart3,
       current: location.pathname === "/" || location.pathname === "/dashboard",
       roles: ["admin", "manager", "employee"],
@@ -85,9 +85,9 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     },
     {
       name: "Revenue",
-      href: "/revenue",
+      href: "/reports/revenue",
       icon: FileText,
-      current: location.pathname.startsWith("/revenue"),
+      current: location.pathname.startsWith("/reports/revenue"),
       roles: ["admin"],
     },
     {
