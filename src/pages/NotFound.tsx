@@ -2,7 +2,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 
 const NotFound = () => {
   const location = useLocation();
@@ -24,7 +24,7 @@ const NotFound = () => {
     } else if (location.pathname.includes('/products/')) {
       return '/products';
     } else {
-      return '/';
+      return '/dashboard';
     }
   };
 
@@ -36,22 +36,33 @@ const NotFound = () => {
     } else if (location.pathname.includes('/products/')) {
       return 'Back to Products';
     } else {
-      return 'Return to Home';
+      return 'Return to Dashboard';
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white rounded-lg shadow-md p-8 max-w-md w-full text-center">
-        <h1 className="text-6xl font-bold text-primary mb-4">404</h1>
-        <p className="text-xl text-gray-700 mb-6">Oops! Page not found</p>
-        <p className="text-gray-500 mb-8">
-          The page you are looking for doesn't exist or has been moved.
+    <div className="flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8 text-center">
+        <div className="flex justify-center">
+          <div className="bg-primary/10 rounded-full p-6">
+            <Search className="h-12 w-12 text-primary" />
+          </div>
+        </div>
+        <h1 className="text-4xl font-extrabold text-primary mt-6">404</h1>
+        <h2 className="mt-2 text-2xl font-bold tracking-tight">Page not found</h2>
+        <p className="mt-2 text-base text-gray-500">
+          Sorry, we couldn't find the page you're looking for.
         </p>
-        <Button onClick={() => navigate(getBackLink())} className="w-full">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          {getBackLinkLabel()}
-        </Button>
+        <div className="mt-6">
+          <Button 
+            onClick={() => navigate(getBackLink())} 
+            className="w-full"
+            size="lg"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            {getBackLinkLabel()}
+          </Button>
+        </div>
       </div>
     </div>
   );
