@@ -121,7 +121,7 @@ const NewCustomer = () => {
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Default</SelectItem>
+                      <SelectItem value="default">Default</SelectItem>
                       {categories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id}>
                           {cat.name}

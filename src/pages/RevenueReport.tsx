@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -14,7 +13,6 @@ import { toast } from "sonner";
 import { ArrowLeft, Download, FileText, TrendingUp, PieChart as PieChartIcon } from "lucide-react";
 import { UserRole } from "@/types";
 
-// Helper function to export data to CSV
 const exportToCSV = (data: any[], filename: string) => {
   const headers = Object.keys(data[0]).join(',');
   const csvData = data.map(row => Object.values(row).join(',')).join('\n');
@@ -56,14 +54,12 @@ const RevenueReport = () => {
     topSellingCategory: ""
   });
   
-  // Check if user is admin
   useEffect(() => {
     if (currentUser.role !== "admin") {
       toast.error("You don't have permission to access this page");
       navigate("/dashboard");
     }
     
-    // Log view activity
     if (currentUser?.name) {
       const logs = JSON.parse(localStorage.getItem('activity_logs') || '[]');
       logs.push({
@@ -79,11 +75,9 @@ const RevenueReport = () => {
     }
   }, [currentUser, navigate]);
   
-  // Process data when date range or orders change
   useEffect(() => {
     if (!date?.from || !date?.to) return;
     
-    // Filter orders by date range
     const filteredOrders = orders.filter(order => {
       const orderDate = new Date(order.createdAt);
       return isWithinInterval(orderDate, {
@@ -92,7 +86,6 @@ const RevenueReport = () => {
       });
     });
     
-    // Generate daily sales data
     const dailyMap = new Map();
     filteredOrders.forEach(order => {
       const dateStr = format(new Date(order.createdAt), 'yyyy-MM-dd');
@@ -105,14 +98,12 @@ const RevenueReport = () => {
       amount: amount
     }));
     
-    // Sort by date
     dailySales.sort((a, b) => {
       return new Date(a.date).getTime() - new Date(b.date).getTime();
     });
     
     setSalesData(dailySales);
     
-    // Generate category sales data
     const categoryMap = new Map();
     filteredOrders.forEach(order => {
       order.items.forEach(item => {
@@ -129,7 +120,6 @@ const RevenueReport = () => {
     
     setCategoryData(categorySales);
     
-    // Generate product sales data
     const productMap = new Map();
     filteredOrders.forEach(order => {
       order.items.forEach(item => {
@@ -144,16 +134,14 @@ const RevenueReport = () => {
         value: amount
       }))
       .sort((a, b) => b.value - a.value)
-      .slice(0, 5); // Top 5 products
+      .slice(0, 5);
     
     setProductData(productSales);
     
-    // Calculate summary statistics
     const totalRevenue = filteredOrders.reduce((sum, order) => sum + order.totalAmount, 0);
     const totalOrders = filteredOrders.length;
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
     
-    // Find top selling product and category
     let topProduct = { name: "None", sales: 0 };
     let topCategory = { name: "None", sales: 0 };
     
@@ -176,13 +164,11 @@ const RevenueReport = () => {
       topSellingProduct: topProduct.name,
       topSellingCategory: topCategory.name
     });
-    
   }, [date, orders]);
   
   const handleExportCSV = () => {
     if (!date?.from || !date?.to) return;
     
-    // Filter orders by date range
     const filteredOrders = orders.filter(order => {
       const orderDate = new Date(order.createdAt);
       return isWithinInterval(orderDate, {
@@ -191,7 +177,6 @@ const RevenueReport = () => {
       });
     });
     
-    // Prepare data for CSV export
     const csvData = filteredOrders.map(order => ({
       OrderID: order.id,
       CustomerName: order.customer.name,
@@ -202,7 +187,6 @@ const RevenueReport = () => {
       TrackingID: order.trackingId || 'N/A'
     }));
     
-    // Export to CSV
     exportToCSV(
       csvData, 
       `revenue-report-${format(date.from!, 'yyyy-MM-dd')}-to-${format(date.to || date.from!, 'yyyy-MM-dd')}.csv`
@@ -210,7 +194,6 @@ const RevenueReport = () => {
     
     toast.success("Report exported successfully");
     
-    // Log export activity
     const currentUser = JSON.parse(localStorage.getItem('current_user') || '{}');
     if (currentUser?.name) {
       const logs = JSON.parse(localStorage.getItem('activity_logs') || '[]');
@@ -227,7 +210,26 @@ const RevenueReport = () => {
     }
   };
   
-  // Custom colors for charts
+  const handleSendBulkMessage = () => {
+    const eligibleCustomers = getEligibleCustomers();
+    
+    if (eligibleCustomers.length === 0) {
+      toast.error("No customers found matching the selected criteria");
+      return;
+    }
+    
+    setIsSending(true);
+    
+    setTimeout(() => {
+      setIsSending(false);
+      toast.success(`Bulk message sent to ${eligibleCustomers.length} customers`);
+    }, 2000);
+    
+    console.log(`Sending message to ${eligibleCustomers.length} customers`);
+    console.log("Message:", bulkMessageText);
+    console.log("Customers:", eligibleCustomers);
+  };
+  
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
   return (
@@ -262,7 +264,6 @@ const RevenueReport = () => {
           </div>
         </div>
         
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
@@ -312,7 +313,6 @@ const RevenueReport = () => {
           </Card>
         </div>
         
-        {/* Chart */}
         <Card>
           <CardHeader>
             <CardTitle>
