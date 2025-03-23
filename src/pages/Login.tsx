@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Eye, EyeOff, LogIn, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { UserRole } from "@/types";
 
 const Login = () => {
   const { state, setCurrentUser } = useAppContext();
@@ -55,8 +56,8 @@ const Login = () => {
       if (apiError) {
         // Fallback to local check if API is unavailable
         const defaultUsers = [
-          { id: 'u1', email: 'admin@example.com', password: 'password', name: 'Admin User', role: 'admin', active: true },
-          { id: 'u2', email: 'manager@example.com', password: 'password', name: 'Manager User', role: 'manager', active: true }
+          { id: 'u1', email: 'admin@example.com', password: 'password', name: 'Admin User', role: 'admin' as UserRole, active: true },
+          { id: 'u2', email: 'manager@example.com', password: 'password', name: 'Manager User', role: 'manager' as UserRole, active: true }
         ];
         
         const user = defaultUsers.find(

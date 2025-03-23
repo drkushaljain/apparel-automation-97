@@ -47,7 +47,14 @@ const DeliverySlip = ({ order }: DeliverySlipProps) => {
               .border-t { border-top: 1px solid #ddd; padding-top: 12px; margin-top: 12px; }
               .pt-2 { padding-top: 8px; }
               .mt-2 { margin-top: 8px; }
-              .company-logo { max-width: 100px; max-height: 100px; margin: 0 auto; display: block; }
+              .company-logo { 
+                width: 100px; 
+                height: 60px; 
+                margin: 0 auto 10px; 
+                display: block; 
+                object-fit: contain;
+                object-position: center;
+              }
               @media print {
                 body { margin: 0; padding: 0; }
                 .slip-container { border: none; max-width: 100%; }
@@ -110,7 +117,8 @@ const DeliverySlip = ({ order }: DeliverySlipProps) => {
                 <img 
                   src={companySettings.logo} 
                   alt={companySettings.name} 
-                  className="mx-auto h-16 object-contain"
+                  className="mx-auto h-16 w-24 object-contain"
+                  style={{ maxWidth: '100px', maxHeight: '60px', objectFit: 'contain' }}
                 />
               </div>
             )}
