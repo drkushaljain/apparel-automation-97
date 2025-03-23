@@ -1,38 +1,105 @@
 
-# Apparel Order Management System
+# Apparel Management System
 
-A comprehensive management system for apparel businesses that handle orders through WhatsApp. This application helps track orders, customers, products, and streamlines the fulfillment process.
+A complete solution for apparel inventory and sales management. This application helps businesses manage their product inventory, track sales, and streamline order processing.
 
 ## Features
 
-- **Dashboard**: View sales statistics and key metrics at a glance
-- **Order Management**: Create, edit, and track orders through the entire fulfillment process
-- **Customer Database**: Store and manage customer information
-- **Product Catalog**: Manage product information and availability
-- **WhatsApp Integration**: Send order updates and tracking information via WhatsApp
-- **Delivery Slip Generation**: Create and print delivery slips for packaging
-- **Export Functionality**: Export orders, customers, and products to CSV
-- **User Roles**: Support for different user access levels (admin, manager, staff)
+- Product inventory management
+- Order tracking and management
+- Customer relationship management
+- User management with role-based permissions
+- Dashboard with key business metrics
+- Reports and analytics
+
+## Prerequisites
+
+- Node.js (v14 or later)
+- PostgreSQL (v12 or later)
+
+## Installation
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/yourusername/apparel-management.git
+cd apparel-management
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Set up the database
+
+1. Create a PostgreSQL database
+2. Set the DATABASE_URL environment variable to connect to your PostgreSQL database:
+
+```bash
+# For development
+export DATABASE_URL=postgresql://username:password@localhost:5432/apparel_management
+
+# For Windows command prompt
+set DATABASE_URL=postgresql://username:password@localhost:5432/apparel_management
+
+# For Windows PowerShell
+$env:DATABASE_URL="postgresql://username:password@localhost:5432/apparel_management"
+```
+
+3. Initialize the database schema and default users:
+
+```bash
+node src/scripts/db-init.js
+```
+
+### 4. Build and start the application
+
+```bash
+npm run build
+npm start
+```
+
+The application will be available at http://localhost:3000
 
 ## Development
 
-This project is built with:
+To run the application in development mode:
 
-- React
-- TypeScript
-- Tailwind CSS
-- shadcn/ui
-- React Router
-- Recharts for data visualization
+```bash
+npm run dev
+```
 
-## Getting Started
+## Default User Credentials
 
-1. Clone the repository
-2. Install dependencies with `npm install`
-3. Start the development server with `npm run dev`
-4. Open `http://localhost:8080` in your browser
+After initializing the database, you can login with these default credentials:
 
-## License
+- Admin User:
+  - Email: admin@example.com
+  - Password: password
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+- Manager User:
+  - Email: manager@example.com
+  - Password: password
 
+## Environment Variables
+
+- `PORT`: The port to run the server on (default: 3000)
+- `DATABASE_URL`: PostgreSQL connection string
+- `NODE_ENV`: Environment mode (development, production)
+
+## Troubleshooting
+
+### API Connection Issues
+
+If you see errors like "Unexpected token '<', "<!DOCTYPE "... is not valid JSON", it means:
+
+1. The server is running but not properly handling API requests, or
+2. The database is not properly configured
+
+Solutions:
+- Ensure the SERVER is running before accessing the web application
+- Check that DATABASE_URL is correctly set
+- Run the database initialization script: `node src/scripts/db-init.js`
+- Check server logs for database connection errors

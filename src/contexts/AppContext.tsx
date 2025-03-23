@@ -1,8 +1,53 @@
+
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { Customer, Order, OrderStatus, Product, User, CompanySettings, StockHistoryRecord } from '@/types';
 import { toast } from 'sonner';
 import * as dbService from '@/services/dbService';
 import { format } from 'date-fns';
+
+// Default users for fallback
+const DEFAULT_USERS: User[] = [
+  {
+    id: 'u1',
+    name: 'Admin User',
+    email: 'admin@example.com',
+    password: 'password',
+    role: 'admin',
+    active: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    permissions: {
+      canViewDashboard: true,
+      canManageProducts: true,
+      canManageOrders: true,
+      canManageCustomers: true,
+      canManageUsers: true,
+      canExportData: true,
+      canSendMarketing: true,
+      canViewReports: true
+    }
+  },
+  {
+    id: 'u2',
+    name: 'Manager User',
+    email: 'manager@example.com',
+    password: 'password',
+    role: 'manager',
+    active: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    permissions: {
+      canViewDashboard: true,
+      canManageProducts: true,
+      canManageOrders: true,
+      canManageCustomers: true,
+      canManageUsers: false,
+      canExportData: true,
+      canSendMarketing: true,
+      canViewReports: true
+    }
+  }
+];
 
 export interface StockChange {
   id: string;
@@ -195,23 +240,74 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
+  // Check for saved user session on first load
+  useEffect(() => {
+    const savedUser = localStorage.getItem('current_user');
+    if (savedUser) {
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        dispatch({ type: 'SET_CURRENT_USER', payload: parsedUser });
+      } catch (error) {
+        console.error('Error parsing saved user:', error);
+        localStorage.removeItem('current_user');
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const loadData = async () => {
       dispatch({ type: 'SET_LOADING', payload: true });
       
       try {
-        await dbService.initializeDatabase();
+        // Initialize database connection
+        const isPostgresAvailable = await dbService.initializeDatabase();
         
-        const products = await dbService.getProducts();
-        const customers = await dbService.getCustomers();
-        const orders = await dbService.getOrders();
-        const users = await dbService.getUsers();
-        const companySettings = await dbService.getCompanySettings();
-        const stockHistory = await dbService.getStockHistory();
+        if (!isPostgresAvailable) {
+          toast.warning('Using local storage mode - database connection failed', {
+            duration: 5000
+          });
+        }
         
-        dispatch({ type: 'SET_PRODUCTS', payload: products });
-        dispatch({ type: 'SET_CUSTOMERS', payload: customers });
-        dispatch({ type: 'SET_ORDERS', payload: orders });
+        // Load products
+        try {
+          const products = await dbService.getProducts();
+          dispatch({ type: 'SET_PRODUCTS', payload: products });
+        } catch (error) {
+          console.error("Error loading products:", error);
+          dispatch({ type: 'SET_PRODUCTS', payload: [] });
+        }
+        
+        // Load customers
+        try {
+          const customers = await dbService.getCustomers();
+          dispatch({ type: 'SET_CUSTOMERS', payload: customers });
+        } catch (error) {
+          console.error("Error loading customers:", error);
+          dispatch({ type: 'SET_CUSTOMERS', payload: [] });
+        }
+        
+        // Load orders
+        try {
+          const orders = await dbService.getOrders();
+          dispatch({ type: 'SET_ORDERS', payload: orders });
+        } catch (error) {
+          console.error("Error loading orders:", error);
+          dispatch({ type: 'SET_ORDERS', payload: [] });
+        }
+        
+        // Load users
+        let users: User[] = [];
+        try {
+          users = await dbService.getUsers();
+          
+          // If we get no users from the database, use default users
+          if (users.length === 0) {
+            users = DEFAULT_USERS;
+          }
+        } catch (error) {
+          console.error("Error loading users:", error);
+          users = DEFAULT_USERS;
+        }
         
         const updatedUsers = users.map(user => {
           if (!user.password) {
@@ -235,14 +331,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         });
         
         dispatch({ type: 'SET_USERS', payload: updatedUsers });
-        dispatch({ type: 'SET_STOCK_HISTORY', payload: stockHistory });
         
-        if (companySettings) {
-          dispatch({ type: 'SET_COMPANY_SETTINGS', payload: companySettings });
+        // Load stock history
+        try {
+          const stockHistory = await dbService.getStockHistory();
+          dispatch({ type: 'SET_STOCK_HISTORY', payload: stockHistory });
+        } catch (error) {
+          console.error("Error loading stock history:", error);
+          dispatch({ type: 'SET_STOCK_HISTORY', payload: [] });
         }
         
+        // Load company settings
+        try {
+          const companySettings = await dbService.getCompanySettings();
+          if (companySettings) {
+            dispatch({ type: 'SET_COMPANY_SETTINGS', payload: companySettings });
+          }
+        } catch (error) {
+          console.error("Error loading company settings:", error);
+        }
+        
+        // Ensure a current user is set if not already and there are users available
         if (updatedUsers.length > 0 && !state.currentUser) {
-          dispatch({ type: 'SET_CURRENT_USER', payload: updatedUsers[0] });
+          // Don't auto-login, let the user login explicitly
+          // dispatch({ type: 'SET_CURRENT_USER', payload: updatedUsers[0] });
         }
       } catch (error) {
         console.error("Error loading data:", error);

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Eye, EyeOff, LogIn } from "lucide-react";
+import { Eye, EyeOff, LogIn, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Login = () => {
   const { state, setCurrentUser } = useAppContext();
@@ -17,8 +18,29 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [apiError, setApiError] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Check if API is accessible
+    const checkApiStatus = async () => {
+      try {
+        const response = await fetch('/api/health');
+        if (!response.ok) {
+          console.error('API health check failed:', response.status);
+          setApiError(true);
+        } else {
+          setApiError(false);
+        }
+      } catch (error) {
+        console.error('API connection error:', error);
+        setApiError(true);
+      }
+    };
+
+    checkApiStatus();
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
@@ -29,20 +51,77 @@ const Login = () => {
       return;
     }
     
-    // Find user with matching email
-    const user = state.users.find(
-      u => u.email.toLowerCase() === email.toLowerCase() && u.password === password && u.active
-    );
-    
-    if (user) {
-      setCurrentUser(user);
-      toast.success(`Welcome back, ${user.name}!`);
-      navigate("/dashboard");
-    } else {
-      toast.error("Invalid email or password");
+    try {
+      if (apiError) {
+        // Fallback to local check if API is unavailable
+        const defaultUsers = [
+          { id: 'u1', email: 'admin@example.com', password: 'password', name: 'Admin User', role: 'admin', active: true },
+          { id: 'u2', email: 'manager@example.com', password: 'password', name: 'Manager User', role: 'manager', active: true }
+        ];
+        
+        const user = defaultUsers.find(
+          u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+        );
+        
+        if (user) {
+          const fullUser = {
+            ...user,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            permissions: {
+              canViewDashboard: user.role === "admin",
+              canManageProducts: user.role !== "employee",
+              canManageOrders: true,
+              canManageCustomers: true,
+              canManageUsers: user.role === "admin",
+              canExportData: user.role !== "employee",
+              canSendMarketing: user.role !== "employee",
+              canViewReports: user.role !== "employee",
+            }
+          };
+          
+          setCurrentUser(fullUser);
+          toast.success(`Welcome back, ${user.name}! (Local Mode)`);
+          navigate("/dashboard");
+        } else {
+          toast.error("Invalid email or password");
+        }
+      } else {
+        // Try API login
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, password }),
+        });
+        
+        if (response.ok) {
+          const userData = await response.json();
+          setCurrentUser(userData);
+          toast.success(`Welcome back, ${userData.name}!`);
+          navigate("/dashboard");
+        } else {
+          // Fallback to checking against existing users
+          const user = state.users.find(
+            u => u.email.toLowerCase() === email.toLowerCase() && u.password === password && u.active
+          );
+          
+          if (user) {
+            setCurrentUser(user);
+            toast.success(`Welcome back, ${user.name}!`);
+            navigate("/dashboard");
+          } else {
+            toast.error("Invalid email or password");
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error("Login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   const togglePasswordVisibility = () => {
@@ -52,12 +131,21 @@ const Login = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 animate-fade-in">
           <h1 className="text-3xl font-bold text-primary">Apparel Management</h1>
           <p className="text-muted-foreground mt-2">Your complete solution for apparel inventory and sales</p>
         </div>
         
-        <Card className="border-none shadow-lg bg-white/90 backdrop-blur-sm dark:bg-gray-800/90">
+        {apiError && (
+          <Alert variant="destructive" className="mb-4 animate-slide-up">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              API server is unavailable. Login will use local authentication.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        <Card className="border-none shadow-lg bg-white/90 backdrop-blur-sm dark:bg-gray-800/90 animate-slide-up">
           <CardHeader className="space-y-1 pb-2">
             <CardTitle className="text-2xl font-bold text-center">Sign In</CardTitle>
             <CardDescription className="text-center">
@@ -120,7 +208,7 @@ const Login = () => {
           </form>
         </Card>
         
-        <div className="mt-6 text-center text-sm text-muted-foreground">
+        <div className="mt-6 text-center text-sm text-muted-foreground animate-slide-up delay-100">
           <p>&copy; {new Date().getFullYear()} Apparel Management System. All rights reserved.</p>
         </div>
       </div>

@@ -1,4 +1,3 @@
-
 const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');
@@ -14,19 +13,41 @@ app.use(express.json());
 // Serve static files from the dist directory
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// Database connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+// Check if DATABASE_URL is set
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  console.warn('WARNING: DATABASE_URL is not set. Using mock data instead.');
+}
+
+// Database connection (only if DATABASE_URL is set)
+const pool = databaseUrl ? new Pool({
+  connectionString: databaseUrl,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+}) : null;
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  if (!pool) {
+    return res.status(503).json({ 
+      status: 'Error', 
+      message: 'DATABASE_URL not configured',
+      timestamp: new Date().toISOString() 
+    });
+  }
+  
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
 // API endpoint to check database connection
 app.get('/api/db-status', async (req, res) => {
+  if (!pool) {
+    return res.status(503).json({
+      connected: false,
+      type: 'none',
+      message: 'DATABASE_URL not configured',
+    });
+  }
+  
   try {
     const client = await pool.connect();
     const result = await client.query('SELECT NOW()');
@@ -46,6 +67,64 @@ app.get('/api/db-status', async (req, res) => {
       message: 'Failed to connect to PostgreSQL database',
       error: error.message
     });
+  }
+});
+
+// Authentication endpoint
+app.post('/api/auth/login', async (req, res) => {
+  if (!pool) {
+    return res.status(503).json({ error: 'Database not configured' });
+  }
+  
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+    
+    const result = await pool.query(
+      'SELECT * FROM users WHERE email = $1 AND active = true',
+      [email]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+    
+    const user = result.rows[0];
+    
+    // In a real app, you'd verify the password hash here
+    // For demo purposes, we're just checking the plaintext password
+    if (user.password !== password) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+    
+    // Format user response
+    const userResponse = {
+      id: user.id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      active: user.active,
+      createdAt: user.created_at,
+      updatedAt: user.updated_at,
+      permissions: user.permissions || {
+        canViewDashboard: user.role === "admin",
+        canManageProducts: user.role !== "employee",
+        canManageOrders: true,
+        canManageCustomers: true,
+        canManageUsers: user.role === "admin",
+        canExportData: user.role !== "employee",
+        canSendMarketing: user.role !== "employee",
+        canViewReports: user.role !== "employee",
+      }
+    };
+    
+    res.json(userResponse);
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -448,6 +527,85 @@ app.get('/api/company-settings', async (req, res) => {
   }
 });
 
+// Add a new API endpoint to initialize the database with basic data if empty
+app.post('/api/initialize-db', async (req, res) => {
+  if (!pool) {
+    return res.status(503).json({ error: 'Database not configured' });
+  }
+  
+  try {
+    // Check if users table exists
+    const tablesResult = await pool.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name = 'users'
+    `);
+    
+    if (tablesResult.rows.length === 0) {
+      // Run the schema.sql to create tables
+      const schemaPath = path.join(__dirname, 'database', 'schema.sql');
+      const schema = require('fs').readFileSync(schemaPath, 'utf8');
+      
+      await pool.query(schema);
+      
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Database initialized with schema' 
+      });
+    }
+    
+    // Check if users table has any records
+    const usersResult = await pool.query('SELECT COUNT(*) FROM users');
+    
+    if (parseInt(usersResult.rows[0].count) === 0) {
+      // Insert default admin user
+      await pool.query(`
+        INSERT INTO users (name, email, password_hash, password, role, active, permissions)
+        VALUES (
+          'Admin User',
+          'admin@example.com',
+          '$2a$10$qLJZFgMoE8vg7NYgDRbZZ.lxK1SFwQn96MNKMoXB1jJjfVbQMQaXm',
+          'password',
+          'admin',
+          true,
+          '{"canViewDashboard":true,"canManageProducts":true,"canManageOrders":true,"canManageCustomers":true,"canManageUsers":true,"canExportData":true,"canSendMarketing":true,"canViewReports":true}'
+        )
+      `);
+      
+      // Insert default manager user
+      await pool.query(`
+        INSERT INTO users (name, email, password_hash, password, role, active, permissions)
+        VALUES (
+          'Manager User',
+          'manager@example.com',
+          '$2a$10$qLJZFgMoE8vg7NYgDRbZZ.lxK1SFwQn96MNKMoXB1jJjfVbQMQaXm',
+          'password',
+          'manager',
+          true,
+          '{"canViewDashboard":true,"canManageProducts":true,"canManageOrders":true,"canManageCustomers":true,"canManageUsers":false,"canExportData":true,"canSendMarketing":true,"canViewReports":true}'
+        )
+      `);
+      
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Default users created' 
+      });
+    }
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'Database already initialized' 
+    });
+  } catch (error) {
+    console.error('Database initialization error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 // Handle all other routes by serving the index.html file
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
@@ -462,9 +620,11 @@ app.listen(PORT, () => {
   
   // Log environment info
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`Using PostgreSQL: ${process.env.USE_POSTGRES || 'true'}`);
   
-  if (!process.env.DATABASE_URL) {
-    console.warn('WARNING: DATABASE_URL is not set');
+  if (!databaseUrl) {
+    console.warn('WARNING: DATABASE_URL is not set, database features will not work');
+    console.warn('Set DATABASE_URL in your environment to connect to PostgreSQL');
+  } else {
+    console.log('Using PostgreSQL database');
   }
 });
