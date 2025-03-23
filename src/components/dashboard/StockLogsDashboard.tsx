@@ -3,27 +3,38 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppContext } from "@/contexts/AppContext";
 import { Badge } from "@/components/ui/badge";
-import { Package, AlertCircle } from "lucide-react";
+import { Package, AlertCircle, RefreshCcw } from "lucide-react";
 import * as dbService from '@/services/dbService';
 
 const StockLogsDashboard = () => {
   const { state, formatDate } = useAppContext();
   const [stockLogs, setStockLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
     const fetchStockHistory = async () => {
       try {
         setLoading(true);
+        setError(null);
         // Get stock history from the database
         const history = await dbService.getStockHistory();
         
-        // Take only the latest 10 entries
-        const recentHistory = history.slice(0, 10);
+        if (!history || history.length === 0) {
+          console.log("No stock history found");
+        } else {
+          console.log(`Found ${history.length} stock history records`);
+        }
+        
+        // Take only the latest 10 entries, sorted by timestamp
+        const recentHistory = [...history]
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+          .slice(0, 10);
         
         setStockLogs(recentHistory);
       } catch (error) {
         console.error("Failed to fetch stock history:", error);
+        setError("Failed to load stock history. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -46,8 +57,14 @@ const StockLogsDashboard = () => {
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <div className="flex flex-col items-center justify-center py-10">
+            <RefreshCcw className="h-8 w-8 animate-spin mb-2 text-primary/70" />
+            <p className="text-muted-foreground">Loading stock changes...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+            <AlertCircle className="h-10 w-10 mb-2 text-red-500/70" />
+            <p>{error}</p>
           </div>
         ) : stockLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
@@ -56,13 +73,16 @@ const StockLogsDashboard = () => {
           </div>
         ) : (
           <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
-            {stockLogs.map((log) => (
-              <div key={log.id} className="border-b pb-3 last:border-0 hover:bg-muted/20 rounded-md p-2 transition-colors">
+            {stockLogs.map((log, index) => (
+              <div key={log.id || index} className="border-b pb-3 last:border-0 hover:bg-muted/20 rounded-md p-2 transition-colors">
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="font-medium">{log.productName}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge className={log.changeAmount > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                      <Badge className={`
+                        ${log.changeAmount > 0 ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-red-100 text-red-800 hover:bg-red-200"}
+                        transition-colors
+                      `}>
                         {log.changeAmount > 0 ? `+${log.changeAmount}` : log.changeAmount}
                       </Badge>
                       <p className={`${getActionColor(log.changeAmount)} text-sm`}>
@@ -79,7 +99,7 @@ const StockLogsDashboard = () => {
                     <p className="text-sm text-muted-foreground">
                       {formatDate(log.timestamp)}
                     </p>
-                    <p className="text-xs">By {log.userName}</p>
+                    <p className="text-xs">By {log.userName || log.updatedBy || 'System'}</p>
                   </div>
                 </div>
               </div>

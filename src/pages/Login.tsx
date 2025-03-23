@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Eye, EyeOff, LogIn, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, LogIn, AlertCircle, LucideWifi, WifiOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { UserRole } from "@/types";
+import * as postgresService from "@/services/postgresService";
 
 const Login = () => {
   const { state, setCurrentUser } = useAppContext();
@@ -20,21 +21,54 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState(false);
+  const [apiCheckLoading, setApiCheckLoading] = useState(true);
 
   useEffect(() => {
     // Check if API is accessible
     const checkApiStatus = async () => {
       try {
-        const response = await fetch('/api/health');
-        if (!response.ok) {
-          console.error('API health check failed:', response.status);
-          setApiError(true);
-        } else {
+        setApiCheckLoading(true);
+        
+        // Try connecting to database first
+        const dbConnection = await postgresService.initPostgresConnection();
+        
+        if (dbConnection.success) {
           setApiError(false);
+          console.log("Database connection successful");
+        } else {
+          console.error('Database connection failed:', dbConnection.message);
+          setApiError(true);
+          // Try general API health check as fallback
+          try {
+            const response = await fetch('/api/health', {
+              headers: { 'Accept': 'application/json' },
+              cache: 'no-store'
+            });
+            
+            if (response.ok) {
+              const contentType = response.headers.get('content-type');
+              if (contentType && contentType.includes('application/json')) {
+                // API is working but database isn't
+                console.log('API is working but database connection failed');
+                setApiError(true);
+              } else {
+                console.error('API returned non-JSON response');
+                setApiError(true);
+              }
+            } else {
+              console.error('API health check failed:', response.status);
+              setApiError(true);
+            }
+          } catch (error) {
+            console.error('API connection error:', error);
+            setApiError(true);
+          }
         }
       } catch (error) {
-        console.error('API connection error:', error);
+        console.error('API status check error:', error);
         setApiError(true);
+      } finally {
+        setApiCheckLoading(false);
       }
     };
 
@@ -89,21 +123,14 @@ const Login = () => {
         }
       } else {
         // Try API login
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email, password }),
-        });
+        const userData = await postgresService.loginUser(email, password);
         
-        if (response.ok) {
-          const userData = await response.json();
+        if (userData) {
           setCurrentUser(userData);
           toast.success(`Welcome back, ${userData.name}!`);
           navigate("/dashboard");
         } else {
-          // Fallback to checking against existing users
+          // Fallback to checking against existing users in state
           const user = state.users.find(
             u => u.email.toLowerCase() === email.toLowerCase() && u.password === password && u.active
           );
@@ -137,11 +164,23 @@ const Login = () => {
           <p className="text-muted-foreground mt-2">Your complete solution for apparel inventory and sales</p>
         </div>
         
-        {apiError && (
+        {apiCheckLoading ? (
+          <div className="flex justify-center items-center mb-4 animate-pulse">
+            <LucideWifi className="h-5 w-5 mr-2 text-muted-foreground" />
+            <span className="text-muted-foreground">Checking server connection...</span>
+          </div>
+        ) : apiError ? (
           <Alert variant="destructive" className="mb-4 animate-slide-up">
-            <AlertCircle className="h-4 w-4" />
+            <WifiOff className="h-4 w-4" />
             <AlertDescription>
               API server is unavailable. Login will use local authentication.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert variant="default" className="mb-4 animate-slide-up bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300">
+            <LucideWifi className="h-4 w-4" />
+            <AlertDescription>
+              Connected to server. Using database authentication.
             </AlertDescription>
           </Alert>
         )}
