@@ -1,9 +1,8 @@
-
 import { Product, Customer, Order, User, CompanySettings, StockHistoryRecord } from '@/types';
 import postgresService from './postgresService';
 
-// Add PostgreSQL support
-let usePostgres = false;
+// Set PostgreSQL as the default data store
+let usePostgres = true;
 
 export const initializeDatabase = async (
   initialProducts: Product[] = [],
@@ -11,173 +10,123 @@ export const initializeDatabase = async (
   initialOrders: Order[] = [],
   initialUsers: User[] = []
 ) => {
-  // In browser environments, always use localStorage
+  // In browser environments, we'll need to use a server API
   if (typeof window !== 'undefined') {
-    console.log('Browser environment detected. Using localStorage for data storage');
-    usePostgres = false;
-    
-    // Initialize localStorage with initial data if empty
-    if (!localStorage.getItem('products')) {
-      localStorage.setItem('products', JSON.stringify(initialProducts));
-    }
-    
-    if (!localStorage.getItem('customers')) {
-      localStorage.setItem('customers', JSON.stringify(initialCustomers));
-    }
-    
-    if (!localStorage.getItem('orders')) {
-      localStorage.setItem('orders', JSON.stringify(initialOrders));
-    }
-    
-    if (!localStorage.getItem('users')) {
-      localStorage.setItem('users', JSON.stringify(initialUsers));
-    }
+    console.log('Browser environment detected. Will use API calls to PostgreSQL database');
+    usePostgres = true;
     return;
   }
   
   // Below code will only run in Node.js environment
-  // Try to connect to PostgreSQL if environment variables are set
-  if (typeof process !== 'undefined' && process.env && process.env.DB_HOST) {
-    try {
-      await postgresService.initPostgresConnection();
-      usePostgres = true;
-      console.log('Using PostgreSQL database');
+  try {
+    await postgresService.initPostgresConnection();
+    console.log('Using PostgreSQL database');
+    
+    // Check if we need to seed the database
+    const products = await getProducts();
+    if (products.length === 0) {
+      console.log('Seeding PostgreSQL database with initial data');
       
-      // Check if we need to seed the database
-      const products = await getProducts();
-      if (products.length === 0) {
-        console.log('Seeding PostgreSQL database with initial data');
-        
-        // Seed products
-        for (const product of initialProducts) {
-          await postgresService.createProduct(product);
-        }
-        
-        // Seed other data similarly
-        // ...
+      // Seed products
+      for (const product of initialProducts) {
+        await postgresService.createProduct(product);
       }
       
-      return;
-    } catch (error) {
-      console.error('Failed to initialize PostgreSQL, falling back to localStorage', error);
-      usePostgres = false;
+      // Seed customers
+      for (const customer of initialCustomers) {
+        // Implementation for creating customers would go here
+      }
+      
+      // Seed orders
+      for (const order of initialOrders) {
+        // Implementation for creating orders would go here
+      }
+      
+      // Seed users
+      for (const user of initialUsers) {
+        // Implementation for creating users would go here
+      }
     }
+    
+    return;
+  } catch (error) {
+    console.error('Failed to initialize PostgreSQL', error);
+    throw new Error('Database connection failed');
   }
 };
 
 // Products
 export const getProducts = async (): Promise<Product[]> => {
-  if (usePostgres) {
-    return postgresService.getProducts();
-  }
-  
-  const products = localStorage.getItem('products');
-  return products ? JSON.parse(products) : [];
+  return postgresService.getProducts();
 };
 
 export const saveProducts = async (products: Product[]): Promise<void> => {
-  if (usePostgres) {
-    // In a real implementation, this would bulk update products in PostgreSQL
-    // For simplicity, we'll just log that it would update
-    console.log('Would update products in PostgreSQL');
-    return;
-  }
+  // In a real implementation, this would update products in PostgreSQL
+  console.log('Updating products in PostgreSQL');
   
-  localStorage.setItem('products', JSON.stringify(products));
+  // Loop through products and call update for each
+  for (const product of products) {
+    await postgresService.updateProduct(product);
+  }
 };
 
 // Customers
 export const getCustomers = async (): Promise<Customer[]> => {
-  if (usePostgres) {
-    return []; // This would be implemented in postgresService
-  }
-  
-  const customers = localStorage.getItem('customers');
-  return customers ? JSON.parse(customers) : [];
+  return postgresService.getCustomers();
 };
 
 export const saveCustomers = async (customers: Customer[]): Promise<void> => {
-  if (usePostgres) {
-    console.log('Would update customers in PostgreSQL');
-    return;
-  }
+  console.log('Updating customers in PostgreSQL');
   
-  localStorage.setItem('customers', JSON.stringify(customers));
+  // This would be implemented with actual PostgreSQL queries
+  await postgresService.saveCustomers(customers);
 };
 
 // Orders
 export const getOrders = async (): Promise<Order[]> => {
-  if (usePostgres) {
-    return []; // This would be implemented in postgresService
-  }
-  
-  const orders = localStorage.getItem('orders');
-  return orders ? JSON.parse(orders) : [];
+  return postgresService.getOrders();
 };
 
 export const saveOrders = async (orders: Order[]): Promise<void> => {
-  if (usePostgres) {
-    console.log('Would update orders in PostgreSQL');
-    return;
-  }
+  console.log('Updating orders in PostgreSQL');
   
-  localStorage.setItem('orders', JSON.stringify(orders));
+  // This would be implemented with actual PostgreSQL queries
+  await postgresService.saveOrders(orders);
 };
 
 // Users
 export const getUsers = async (): Promise<User[]> => {
-  if (usePostgres) {
-    return []; // This would be implemented in postgresService
-  }
-  
-  const users = localStorage.getItem('users');
-  return users ? JSON.parse(users) : [];
+  return postgresService.getUsers();
 };
 
 export const saveUsers = async (users: User[]): Promise<void> => {
-  if (usePostgres) {
-    console.log('Would update users in PostgreSQL');
-    return;
-  }
+  console.log('Updating users in PostgreSQL');
   
-  localStorage.setItem('users', JSON.stringify(users));
+  // This would be implemented with actual PostgreSQL queries
+  await postgresService.saveUsers(users);
 };
 
 // Company Settings
 export const getCompanySettings = async (): Promise<CompanySettings | null> => {
-  if (usePostgres) {
-    return null; // This would be implemented in postgresService
-  }
-  
-  const settings = localStorage.getItem('company_settings');
-  return settings ? JSON.parse(settings) : null;
+  return postgresService.getCompanySettings();
 };
 
 export const saveCompanySettings = async (settings: CompanySettings): Promise<void> => {
-  if (usePostgres) {
-    console.log('Would update company settings in PostgreSQL');
-    return;
-  }
+  console.log('Updating company settings in PostgreSQL');
   
-  localStorage.setItem('company_settings', JSON.stringify(settings));
+  // This would be implemented with actual PostgreSQL queries
+  await postgresService.saveCompanySettings(settings);
 };
 
 // Stock History
 export const getStockHistory = async (productId?: string): Promise<StockHistoryRecord[]> => {
-  if (usePostgres && productId) {
-    return []; // This would call postgresService.getStockHistoryByProduct(productId)
-  } else if (usePostgres) {
-    return []; // This would get all stock history from PostgreSQL
-  }
-  
-  const history = localStorage.getItem('stock_history');
-  const records = history ? JSON.parse(history) : [];
-  
   if (productId) {
-    return records.filter((record: StockHistoryRecord) => record.productId === productId);
+    return postgresService.getStockHistoryByProduct(productId);
   }
   
-  return records;
+  // This would get all stock history from PostgreSQL
+  const allHistory = await postgresService.getAllStockHistory();
+  return allHistory;
 };
 
 export const updateProductStock = async (
@@ -187,33 +136,22 @@ export const updateProductStock = async (
   userId: string,
   userName: string
 ): Promise<boolean> => {
-  if (usePostgres) {
-    // This would call PostgreSQL functions
-    console.log('Would update product stock in PostgreSQL');
-    return true;
-  }
+  // Get current product to determine previous stock
+  const product = await postgresService.getProductById(productId);
+  if (!product) return false;
   
-  // For localStorage implementation
-  const productsStr = localStorage.getItem('products');
-  if (!productsStr) return false;
+  const previousStock = product.stock;
   
-  const products = JSON.parse(productsStr);
-  const productIndex = products.findIndex((p: Product) => p.id === productId);
+  // Update product stock in database
+  const updatedProduct = { ...product, stock: newStock, updatedAt: new Date() };
+  const success = await postgresService.updateProduct(updatedProduct);
   
-  if (productIndex === -1) return false;
-  
-  const previousStock = products[productIndex].stock;
-  products[productIndex].stock = newStock;
-  products[productIndex].updatedAt = new Date();
-  
-  localStorage.setItem('products', JSON.stringify(products));
+  if (!success) return false;
   
   // Record stock history
-  const stockHistory = JSON.parse(localStorage.getItem('stock_history') || '[]');
-  stockHistory.unshift({
-    id: `sc${Date.now()}`,
+  await postgresService.addStockHistory({
     productId,
-    productName: products[productIndex].name,
+    productName: product.name,
     previousStock,
     newStock,
     changeAmount: newStock - previousStock,
@@ -222,8 +160,6 @@ export const updateProductStock = async (
     timestamp: new Date(),
     reason
   });
-  
-  localStorage.setItem('stock_history', JSON.stringify(stockHistory));
   
   return true;
 };

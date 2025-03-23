@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { Customer, Order, OrderStatus, Product, User, CompanySettings, StockHistoryRecord } from '@/types';
-import { generateMockOrders, mockCustomers, mockProducts, mockUsers } from '@/data/mockData';
 import { toast } from 'sonner';
 import * as dbService from '@/services/dbService';
 import { format } from 'date-fns';
@@ -201,24 +200,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       dispatch({ type: 'SET_LOADING', payload: true });
       
       try {
-        dbService.initializeDatabase(
-          mockProducts,
-          mockCustomers,
-          generateMockOrders(),
-          mockUsers
-        );
+        await dbService.initializeDatabase();
         
         const products = await dbService.getProducts();
         const customers = await dbService.getCustomers();
         const orders = await dbService.getOrders();
         const users = await dbService.getUsers();
         const companySettings = await dbService.getCompanySettings();
+        const stockHistory = await dbService.getStockHistory();
         
-        dispatch({ type: 'SET_PRODUCTS', payload: products.length ? products : mockProducts });
-        dispatch({ type: 'SET_CUSTOMERS', payload: customers.length ? customers : mockCustomers });
-        dispatch({ type: 'SET_ORDERS', payload: orders.length ? orders : generateMockOrders() });
+        dispatch({ type: 'SET_PRODUCTS', payload: products });
+        dispatch({ type: 'SET_CUSTOMERS', payload: customers });
+        dispatch({ type: 'SET_ORDERS', payload: orders });
         
-        const updatedUsers = (users.length ? users : mockUsers).map(user => {
+        const updatedUsers = users.map(user => {
           if (!user.password) {
             return {
               ...user,
@@ -240,38 +235,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         });
         
         dispatch({ type: 'SET_USERS', payload: updatedUsers });
-        
-        const stockHistory = JSON.parse(localStorage.getItem('stock_history') || '[]');
         dispatch({ type: 'SET_STOCK_HISTORY', payload: stockHistory });
         
         if (companySettings) {
           dispatch({ type: 'SET_COMPANY_SETTINGS', payload: companySettings });
         }
+        
+        if (updatedUsers.length > 0 && !state.currentUser) {
+          dispatch({ type: 'SET_CURRENT_USER', payload: updatedUsers[0] });
+        }
       } catch (error) {
         console.error("Error loading data:", error);
         toast.error("Failed to load data from the database");
-        
-        dispatch({ type: 'SET_PRODUCTS', payload: mockProducts });
-        dispatch({ type: 'SET_CUSTOMERS', payload: mockCustomers });
-        dispatch({ type: 'SET_ORDERS', payload: generateMockOrders() });
-        
-        const updatedMockUsers = mockUsers.map(user => ({
-          ...user,
-          active: true,
-          permissions: {
-            canViewDashboard: user.role === "admin",
-            canManageProducts: user.role !== "employee",
-            canManageOrders: true,
-            canManageCustomers: true,
-            canManageUsers: user.role === "admin",
-            canExportData: user.role !== "employee",
-            canSendMarketing: user.role !== "employee",
-            canViewReports: user.role !== "employee",
-          }
-        }));
-        
-        dispatch({ type: 'SET_USERS', payload: updatedMockUsers });
-        dispatch({ type: 'SET_CURRENT_USER', payload: updatedMockUsers[0] });
       } finally {
         dispatch({ type: 'SET_LOADING', payload: false });
       }
@@ -280,21 +255,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     loadData();
   }, []);
   
-  useEffect(() => {
-    if (!state.isLoading) {
-      dbService.saveProducts(state.products);
-      dbService.saveCustomers(state.customers);
-      dbService.saveOrders(state.orders);
-      dbService.saveUsers(state.users);
-      
-      if (state.companySettings) {
-        dbService.saveCompanySettings(state.companySettings);
-      }
-      
-      localStorage.setItem('stock_history', JSON.stringify(state.stockHistory));
-    }
-  }, [state.products, state.customers, state.orders, state.users, state.companySettings, state.stockHistory, state.isLoading]);
-
   const addProduct = (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newProduct: Product = {
       ...productData,

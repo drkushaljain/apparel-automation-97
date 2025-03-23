@@ -3,37 +3,36 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppContext } from "@/contexts/AppContext";
 import { ActivityLog } from "@/types";
+import * as dbService from '@/services/dbService';
 
 const StockLogsDashboard = () => {
-  const { state } = useAppContext();
-  const [stockLogs, setStockLogs] = useState<ActivityLog[]>([]);
+  const { state, formatDate } = useAppContext();
+  const [stockLogs, setStockLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    // Load stock-related activity logs
-    const logs = JSON.parse(localStorage.getItem('activity_logs') || '[]')
-      .filter((log: ActivityLog) => 
-        log.entityType === 'product' && 
-        (log.action === 'stock_increased' || log.action === 'stock_decreased')
-      )
-      .sort((a: ActivityLog, b: ActivityLog) => 
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      )
-      .slice(0, 10);
+    const fetchStockHistory = async () => {
+      try {
+        setLoading(true);
+        // Get stock history from the database
+        const history = await dbService.getStockHistory();
+        
+        // Take only the latest 10 entries
+        const recentHistory = history.slice(0, 10);
+        
+        setStockLogs(recentHistory);
+      } catch (error) {
+        console.error("Failed to fetch stock history:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    // Match with product names
-    const logsWithProductNames = logs.map((log: ActivityLog) => {
-      const product = state.products.find(p => p.id === log.entityId);
-      return {
-        ...log,
-        productName: product ? product.name : 'Unknown Product'
-      };
-    });
-    
-    setStockLogs(logsWithProductNames);
-  }, [state.products]);
+    fetchStockHistory();
+  }, []);
   
-  const getActionColor = (action: string) => {
-    return action === 'stock_increased' ? 'text-green-600' : 'text-red-600';
+  const getActionColor = (change: number) => {
+    return change > 0 ? 'text-green-600' : 'text-red-600';
   };
 
   return (
@@ -42,23 +41,25 @@ const StockLogsDashboard = () => {
         <CardTitle className="text-xl">Recent Stock Changes</CardTitle>
       </CardHeader>
       <CardContent>
-        {stockLogs.length === 0 ? (
+        {loading ? (
+          <p className="text-center py-4">Loading stock history...</p>
+        ) : stockLogs.length === 0 ? (
           <p className="text-muted-foreground text-center py-4">No recent stock changes</p>
         ) : (
           <div className="space-y-4">
-            {stockLogs.map((log: any) => (
+            {stockLogs.map((log) => (
               <div key={log.id} className="border-b pb-2 last:border-0">
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="font-medium">{log.productName}</p>
-                    <p className={`${getActionColor(log.action)} text-sm`}>
-                      {log.action === 'stock_increased' ? 'Increased' : 'Decreased'}
+                    <p className={`${getActionColor(log.changeAmount)} text-sm`}>
+                      {log.changeAmount > 0 ? 'Increased' : 'Decreased'} by {Math.abs(log.changeAmount)}
                     </p>
-                    <p className="text-sm text-muted-foreground">{log.details}</p>
+                    <p className="text-sm text-muted-foreground">{log.reason}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-muted-foreground">
-                      {new Date(log.timestamp).toLocaleDateString()}
+                      {formatDate(log.timestamp)}
                     </p>
                     <p className="text-xs">By {log.userName}</p>
                   </div>

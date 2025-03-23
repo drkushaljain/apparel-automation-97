@@ -1,241 +1,246 @@
 
 import { Product, Customer, Order, User, CompanySettings, StockHistoryRecord } from '@/types';
 
-// Mock data for browser fallback
-let mockProducts: Product[] = [];
-let mockCustomers: Customer[] = [];
-let mockOrders: Order[] = [];
-let mockStockHistory: StockHistoryRecord[] = [];
+// API endpoint base URL
+const API_BASE_URL = '/api';
 
-// This is a service that uses PostgreSQL in node environments and falls back to localStorage in browser environments
-const isBrowser = typeof window !== 'undefined';
-
-// Initialization function that sets up the connection or prepares mock data
+// Initialize the PostgreSQL connection
 export const initPostgresConnection = async () => {
-  if (isBrowser) {
-    console.log('Browser environment detected, using mock data');
-    // Load mock data from localStorage in browser environment
-    try {
-      const storedProducts = localStorage.getItem('products');
-      if (storedProducts) mockProducts = JSON.parse(storedProducts);
-      
-      const storedCustomers = localStorage.getItem('customers');
-      if (storedCustomers) mockCustomers = JSON.parse(storedCustomers);
-      
-      const storedOrders = localStorage.getItem('orders');
-      if (storedOrders) mockOrders = JSON.parse(storedOrders);
-      
-      const storedStockHistory = localStorage.getItem('stock_history');
-      if (storedStockHistory) mockStockHistory = JSON.parse(storedStockHistory);
-    } catch (error) {
-      console.error('Error loading data from localStorage:', error);
+  try {
+    const response = await fetch(`${API_BASE_URL}/db-status`);
+    const data = await response.json();
+    
+    if (data.connected) {
+      console.log(`Connected to database: ${data.message}`);
+      return { success: true, message: data.message };
+    } else {
+      console.error(`Database connection error: ${data.message}`);
+      return { success: false, message: data.message };
     }
-    return { success: true, message: 'Using browser storage' };
-  } else {
-    try {
-      // In a real Node.js environment, this would import and initialize pg
-      if (process.env.DATABASE_URL) {
-        console.log('Server environment detected, PostgreSQL would be initialized here');
-        // Actual implementation would go here when in Node.js environment
-        return { success: true, message: 'PostgreSQL connected' };
-      } else {
-        console.warn('No DATABASE_URL provided, using mock data');
-        return { success: false, message: 'No DATABASE_URL provided' };
-      }
-    } catch (error) {
-      console.error('Error connecting to PostgreSQL:', error);
-      return { success: false, message: 'Failed to connect to PostgreSQL' };
-    }
+  } catch (error) {
+    console.error('Error connecting to PostgreSQL:', error);
+    return { success: false, message: 'Failed to connect to PostgreSQL' };
   }
 };
 
 // Product operations
 export const getProducts = async (): Promise<Product[]> => {
-  if (isBrowser) {
-    return mockProducts;
+  try {
+    const response = await fetch(`${API_BASE_URL}/products`);
+    if (!response.ok) throw new Error('Failed to fetch products');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    return [];
   }
-  // In Node.js environment, this would query the database
-  return mockProducts;
 };
 
 export const getProductById = async (id: string): Promise<Product | null> => {
-  if (isBrowser) {
-    return mockProducts.find(p => p.id === id) || null;
+  try {
+    const response = await fetch(`${API_BASE_URL}/products/${id}`);
+    if (!response.ok) throw new Error('Failed to fetch product');
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching product ${id}:`, error);
+    return null;
   }
-  // In Node.js environment, this would query the database
-  return mockProducts.find(p => p.id === id) || null;
 };
 
 export const createProduct = async (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<Product | null> => {
-  const newProduct = {
-    ...product,
-    id: `p${Date.now()}`,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  } as Product;
-  
-  if (isBrowser) {
-    mockProducts.push(newProduct);
-    localStorage.setItem('products', JSON.stringify(mockProducts));
-  }
-  // In Node.js environment, this would insert into the database
-  
-  return newProduct;
-};
-
-export const updateProduct = async (product: Product): Promise<Product | null> => {
-  const updatedProduct = {
-    ...product,
-    updatedAt: new Date()
-  };
-  
-  if (isBrowser) {
-    const index = mockProducts.findIndex(p => p.id === product.id);
-    if (index !== -1) {
-      mockProducts[index] = updatedProduct;
-      localStorage.setItem('products', JSON.stringify(mockProducts));
-      return updatedProduct;
-    }
+  try {
+    const response = await fetch(`${API_BASE_URL}/products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(product)
+    });
+    
+    if (!response.ok) throw new Error('Failed to create product');
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating product:', error);
     return null;
   }
-  // In Node.js environment, this would update the database
-  
-  return updatedProduct;
+};
+
+export const updateProduct = async (product: Product): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/products/${product.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(product)
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error(`Error updating product ${product.id}:`, error);
+    return false;
+  }
 };
 
 export const deleteProduct = async (id: string): Promise<boolean> => {
-  if (isBrowser) {
-    const index = mockProducts.findIndex(p => p.id === id);
-    if (index !== -1) {
-      mockProducts.splice(index, 1);
-      localStorage.setItem('products', JSON.stringify(mockProducts));
-      return true;
-    }
+  try {
+    const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+      method: 'DELETE'
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error(`Error deleting product ${id}:`, error);
     return false;
   }
-  // In Node.js environment, this would delete from the database
-  
-  return false;
 };
 
 // Stock history operations
 export const addStockHistory = async (record: Omit<StockHistoryRecord, 'id'>): Promise<StockHistoryRecord | null> => {
-  const newRecord = {
-    ...record,
-    id: `sh${Date.now()}`
-  } as StockHistoryRecord;
-  
-  if (isBrowser) {
-    mockStockHistory.push(newRecord);
-    localStorage.setItem('stock_history', JSON.stringify(mockStockHistory));
+  try {
+    const response = await fetch(`${API_BASE_URL}/stock-history`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(record)
+    });
+    
+    if (!response.ok) throw new Error('Failed to add stock history');
+    return await response.json();
+  } catch (error) {
+    console.error('Error adding stock history:', error);
+    return null;
   }
-  // In Node.js environment, this would insert into the database
-  
-  return newRecord;
 };
 
 export const getStockHistoryByProduct = async (productId: string): Promise<StockHistoryRecord[]> => {
-  if (isBrowser) {
-    return mockStockHistory.filter(r => r.productId === productId);
+  try {
+    const response = await fetch(`${API_BASE_URL}/stock-history/product/${productId}`);
+    if (!response.ok) throw new Error('Failed to fetch stock history');
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching stock history for product ${productId}:`, error);
+    return [];
   }
-  // In Node.js environment, this would query the database
-  
-  return mockStockHistory.filter(r => r.productId === productId);
 };
 
-// Export data to JSON (for backup)
-export const exportToJson = async (): Promise<string> => {
-  const data = {
-    products: mockProducts,
-    customers: mockCustomers,
-    orders: mockOrders,
-    stockHistory: mockStockHistory
-  };
-  
-  return JSON.stringify(data, null, 2);
+export const getAllStockHistory = async (): Promise<StockHistoryRecord[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/stock-history`);
+    if (!response.ok) throw new Error('Failed to fetch stock history');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching all stock history:', error);
+    return [];
+  }
 };
 
-// Additional functions to support the application
+// Customer operations
 export const getCustomers = async (): Promise<Customer[]> => {
-  if (isBrowser) {
-    return mockCustomers;
+  try {
+    const response = await fetch(`${API_BASE_URL}/customers`);
+    if (!response.ok) throw new Error('Failed to fetch customers');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching customers:', error);
+    return [];
   }
-  // In Node.js environment, this would query the database
-  
-  return mockCustomers;
-};
-
-export const getOrders = async (): Promise<Order[]> => {
-  if (isBrowser) {
-    return mockOrders;
-  }
-  // In Node.js environment, this would query the database
-  
-  return mockOrders;
-};
-
-export const getUsers = async (): Promise<User[]> => {
-  if (isBrowser) {
-    // In browser, we'd use localStorage
-    const storedUsers = localStorage.getItem('users');
-    return storedUsers ? JSON.parse(storedUsers) : [];
-  }
-  // In Node.js environment, this would query the database
-  
-  return [];
-};
-
-export const getCompanySettings = async (): Promise<CompanySettings | null> => {
-  if (isBrowser) {
-    // In browser, we'd use localStorage
-    const storedSettings = localStorage.getItem('company_settings');
-    return storedSettings ? JSON.parse(storedSettings) : null;
-  }
-  // In Node.js environment, this would query the database
-  
-  return null;
 };
 
 export const saveCustomers = async (customers: Customer[]): Promise<boolean> => {
-  if (isBrowser) {
-    mockCustomers = customers;
-    localStorage.setItem('customers', JSON.stringify(customers));
-    return true;
+  try {
+    // This would be implemented differently in a real API
+    // For now, we're just simulating batch update
+    const response = await fetch(`${API_BASE_URL}/customers/batch`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(customers)
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Error saving customers:', error);
+    return false;
   }
-  // In Node.js environment, this would save to the database
-  
-  return false;
+};
+
+// Order operations
+export const getOrders = async (): Promise<Order[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/orders`);
+    if (!response.ok) throw new Error('Failed to fetch orders');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    return [];
+  }
 };
 
 export const saveOrders = async (orders: Order[]): Promise<boolean> => {
-  if (isBrowser) {
-    mockOrders = orders;
-    localStorage.setItem('orders', JSON.stringify(orders));
-    return true;
+  try {
+    // This would be implemented differently in a real API
+    // For now, we're just simulating batch update
+    const response = await fetch(`${API_BASE_URL}/orders/batch`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orders)
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Error saving orders:', error);
+    return false;
   }
-  // In Node.js environment, this would save to the database
-  
-  return false;
+};
+
+// User operations
+export const getUsers = async (): Promise<User[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/users`);
+    if (!response.ok) throw new Error('Failed to fetch users');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    return [];
+  }
 };
 
 export const saveUsers = async (users: User[]): Promise<boolean> => {
-  if (isBrowser) {
-    localStorage.setItem('users', JSON.stringify(users));
-    return true;
+  try {
+    // This would be implemented differently in a real API
+    // For now, we're just simulating batch update
+    const response = await fetch(`${API_BASE_URL}/users/batch`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(users)
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Error saving users:', error);
+    return false;
   }
-  // In Node.js environment, this would save to the database
-  
-  return false;
+};
+
+// Company settings operations
+export const getCompanySettings = async (): Promise<CompanySettings | null> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/company-settings`);
+    if (!response.ok) throw new Error('Failed to fetch company settings');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching company settings:', error);
+    return null;
+  }
 };
 
 export const saveCompanySettings = async (settings: CompanySettings): Promise<boolean> => {
-  if (isBrowser) {
-    localStorage.setItem('company_settings', JSON.stringify(settings));
-    return true;
+  try {
+    const response = await fetch(`${API_BASE_URL}/company-settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings)
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Error saving company settings:', error);
+    return false;
   }
-  // In Node.js environment, this would save to the database
-  
-  return false;
 };
 
 // Default export
@@ -248,7 +253,7 @@ export default {
   deleteProduct,
   addStockHistory,
   getStockHistoryByProduct,
-  exportToJson,
+  getAllStockHistory,
   getCustomers,
   getOrders,
   getUsers,
