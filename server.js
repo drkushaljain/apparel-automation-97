@@ -1,8 +1,13 @@
-const express = require('express');
-const path = require('path');
-const { Pool } = require('pg');
+import express from 'express';
+import path from 'path';
+import pg from 'pg';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+
+const { Pool } = pg;
 const app = express();
-const dotenv = require('dotenv');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load environment variables from .env file
 dotenv.config();
@@ -22,8 +27,21 @@ if (!databaseUrl) {
 // Database connection (only if DATABASE_URL is set)
 const pool = databaseUrl ? new Pool({
   connectionString: databaseUrl,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: { rejectUnauthorized: false },
+  connectionTimeoutMillis: 5000,
+  query_timeout: 10000
 }) : null;
+
+// Test database connection
+if (pool) {
+  try {
+    const client = await pool.connect();
+    console.log('Successfully connected to PostgreSQL');
+    client.release();
+  } catch (err) {
+    console.error('Database connection error:', err);
+  }
+}
 
 if (databaseUrl) {
   console.log('Attempting to connect to PostgreSQL database...');
