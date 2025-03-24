@@ -25,6 +25,12 @@ const pool = databaseUrl ? new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 }) : null;
 
+if (databaseUrl) {
+  console.log('Attempting to connect to PostgreSQL database...');
+} else {
+  console.log('No DATABASE_URL provided - running in localStorage mode');
+}
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   if (!pool) {
@@ -614,8 +620,8 @@ app.get('*', (req, res) => {
 // Use the PORT environment variable or default to 3000
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on http://0.0.0.0:${PORT}`);
   console.log(`Visit http://localhost:${PORT} to view the application`);
   
   // Log environment info
