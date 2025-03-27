@@ -1,3 +1,4 @@
+
 // User roles
 export type UserRole = "admin" | "manager" | "employee";
 
@@ -203,4 +204,16 @@ export interface CompanySettings {
   taxId: string;
   logoUrl: string;
   currency: string;
+  name?: string;
+  appName?: string;
+  logo?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  website?: string;
+  socialMedia?: {
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+  };
 }

@@ -1,3 +1,4 @@
+
 const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');
@@ -102,6 +103,12 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
     
+    // Update last login time
+    await pool.query(
+      'UPDATE users SET updated_at = NOW() WHERE id = $1',
+      [user.id]
+    );
+    
     // Format user response
     const userResponse = {
       id: user.id.toString(),
@@ -147,7 +154,7 @@ app.get('/api/products', async (req, res) => {
       isAvailable: row.is_available,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
-      sales: 0, // This would be calculated from orders
+      sales: row.sales || 0,
       sku: row.sku
     }));
     
@@ -179,7 +186,7 @@ app.get('/api/products/:id', async (req, res) => {
       isAvailable: row.is_available,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
-      sales: 0, // This would be calculated from orders
+      sales: row.sales || 0,
       sku: row.sku
     };
     
@@ -214,7 +221,7 @@ app.post('/api/products', async (req, res) => {
       isAvailable: row.is_available,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
-      sales: 0,
+      sales: row.sales || 0,
       sku: row.sku
     };
     
@@ -270,21 +277,24 @@ app.delete('/api/products/:id', async (req, res) => {
 app.get('/api/stock-history', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT * FROM stock_history 
-      ORDER BY created_at DESC
+      SELECT sh.*, p.name as product_name, u.name as user_name
+      FROM stock_history sh
+      LEFT JOIN products p ON sh.product_id = p.id
+      LEFT JOIN users u ON sh.user_id = u.id::text
+      ORDER BY sh.timestamp DESC
     `);
     
     const history = result.rows.map(row => ({
       id: row.id.toString(),
       productId: row.product_id.toString(),
-      productName: '', // We'll get this from a join in a real implementation
+      productName: row.product_name || row.product_name,
       previousStock: row.previous_stock,
       newStock: row.new_stock,
       changeAmount: row.change_amount,
-      userId: row.created_by ? row.created_by.toString() : '',
-      userName: '', // We'll get this from a join in a real implementation
-      timestamp: row.created_at,
-      reason: row.notes
+      userId: row.user_id,
+      userName: row.user_name || row.user_name,
+      timestamp: row.timestamp,
+      reason: row.reason
     }));
     
     res.json(history);
@@ -302,22 +312,22 @@ app.get('/api/stock-history/product/:productId', async (req, res) => {
       SELECT sh.*, p.name as product_name, u.name as user_name
       FROM stock_history sh
       LEFT JOIN products p ON sh.product_id = p.id
-      LEFT JOIN users u ON sh.created_by = u.id
+      LEFT JOIN users u ON sh.user_id = u.id::text
       WHERE sh.product_id = $1
-      ORDER BY sh.created_at DESC
+      ORDER BY sh.timestamp DESC
     `, [productId]);
     
     const history = result.rows.map(row => ({
       id: row.id.toString(),
       productId: row.product_id.toString(),
-      productName: row.product_name,
+      productName: row.product_name || row.product_name,
       previousStock: row.previous_stock,
       newStock: row.new_stock,
       changeAmount: row.change_amount,
-      userId: row.created_by ? row.created_by.toString() : '',
-      userName: row.user_name || '',
-      timestamp: row.created_at,
-      reason: row.notes
+      userId: row.user_id,
+      userName: row.user_name || row.user_name,
+      timestamp: row.timestamp,
+      reason: row.reason
     }));
     
     res.json(history);
@@ -331,36 +341,36 @@ app.post('/api/stock-history', async (req, res) => {
   try {
     const { 
       productId, previousStock, newStock, changeAmount, 
-      userId, reason 
+      userId, userName, reason 
     } = req.body;
     
     const result = await pool.query(`
       INSERT INTO stock_history 
-      (product_id, previous_stock, new_stock, change_amount, transaction_type, notes, created_by) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7) 
+      (product_id, previous_stock, new_stock, change_amount, user_id, user_name, reason, timestamp) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) 
       RETURNING *
     `, [
       productId, 
       previousStock, 
       newStock, 
       changeAmount, 
-      changeAmount > 0 ? 'increase' : 'decrease', 
-      reason, 
-      userId
+      userId,
+      userName,
+      reason
     ]);
     
     const row = result.rows[0];
     const stockHistory = {
       id: row.id.toString(),
       productId: row.product_id.toString(),
-      productName: '', // We'll get this in a real implementation
+      productName: row.product_name || '',
       previousStock: row.previous_stock,
       newStock: row.new_stock,
       changeAmount: row.change_amount,
-      userId: row.created_by ? row.created_by.toString() : '',
-      userName: '', // We'll get this in a real implementation
-      timestamp: row.created_at,
-      reason: row.notes
+      userId: row.user_id,
+      userName: row.user_name || '',
+      timestamp: row.timestamp,
+      reason: row.reason
     };
     
     res.status(201).json(stockHistory);
@@ -386,11 +396,11 @@ app.get('/api/customers', async (req, res) => {
       name: row.name,
       email: row.email,
       phone: row.phone,
-      whatsapp: row.phone, // Using phone for WhatsApp if it's the same
+      whatsapp: row.whatsapp || row.phone,
       address: row.address,
-      city: '', // These fields might be in separate columns or part of address
-      state: '',
-      pincode: '',
+      city: row.city || '',
+      state: row.state || '',
+      pincode: row.pincode || '',
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       orders: row.order_ids.filter(id => id !== null).map(id => id.toString())
@@ -403,6 +413,132 @@ app.get('/api/customers', async (req, res) => {
   }
 });
 
+app.post('/api/customers', async (req, res) => {
+  try {
+    const {
+      name, email, phone, whatsapp, address, city, state, pincode
+    } = req.body;
+    
+    const result = await pool.query(`
+      INSERT INTO customers
+      (name, email, phone, whatsapp, address, city, state, pincode)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *
+    `, [name, email, phone, whatsapp || phone, address, city, state, pincode]);
+    
+    const row = result.rows[0];
+    const customer = {
+      id: row.id.toString(),
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      whatsapp: row.whatsapp || row.phone,
+      address: row.address,
+      city: row.city || '',
+      state: row.state || '',
+      pincode: row.pincode || '',
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      orders: []
+    };
+    
+    res.status(201).json(customer);
+  } catch (error) {
+    console.error('Error creating customer:', error);
+    res.status(500).json({ error: 'Failed to create customer' });
+  }
+});
+
+app.put('/api/customers/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      name, email, phone, whatsapp, address, city, state, pincode
+    } = req.body;
+    
+    const result = await pool.query(`
+      UPDATE customers
+      SET name = $1, email = $2, phone = $3, whatsapp = $4, 
+          address = $5, city = $6, state = $7, pincode = $8, updated_at = NOW()
+      WHERE id = $9
+      RETURNING *
+    `, [name, email, phone, whatsapp || phone, address, city, state, pincode, id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Customer not found' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error(`Error updating customer ${req.params.id}:`, error);
+    res.status(500).json({ error: 'Failed to update customer' });
+  }
+});
+
+app.delete('/api/customers/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if customer has orders
+    const ordersResult = await pool.query(
+      'SELECT COUNT(*) FROM orders WHERE customer_id = $1',
+      [id]
+    );
+    
+    if (parseInt(ordersResult.rows[0].count) > 0) {
+      return res.status(400).json({ 
+        error: 'Cannot delete customer with existing orders' 
+      });
+    }
+    
+    const result = await pool.query('DELETE FROM customers WHERE id = $1', [id]);
+    
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Customer not found' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error(`Error deleting customer ${req.params.id}:`, error);
+    res.status(500).json({ error: 'Failed to delete customer' });
+  }
+});
+
+app.put('/api/customers/batch', async (req, res) => {
+  try {
+    const customers = req.body;
+    
+    if (!Array.isArray(customers)) {
+      return res.status(400).json({ error: 'Expected an array of customers' });
+    }
+    
+    // Update each customer
+    for (const customer of customers) {
+      await pool.query(`
+        UPDATE customers
+        SET name = $1, email = $2, phone = $3, whatsapp = $4, 
+            address = $5, city = $6, state = $7, pincode = $8, updated_at = NOW()
+        WHERE id = $9
+      `, [
+        customer.name, 
+        customer.email, 
+        customer.phone, 
+        customer.whatsapp || customer.phone, 
+        customer.address, 
+        customer.city, 
+        customer.state, 
+        customer.pincode, 
+        customer.id
+      ]);
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating customers in batch:', error);
+    res.status(500).json({ error: 'Failed to update customers' });
+  }
+});
+
 // Users API
 app.get('/api/users', async (req, res) => {
   try {
@@ -412,12 +548,13 @@ app.get('/api/users', async (req, res) => {
       id: row.id.toString(),
       name: row.name,
       email: row.email,
-      password: 'password', // Don't send real password to client
+      password: row.password,
       role: row.role,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
-      active: true,
-      permissions: {
+      active: row.active,
+      phone: row.phone,
+      permissions: row.permissions || {
         canViewDashboard: row.role === "admin",
         canManageProducts: row.role !== "employee",
         canManageOrders: true,
@@ -433,6 +570,189 @@ app.get('/api/users', async (req, res) => {
   } catch (error) {
     console.error('Error fetching users:', error);
     res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+app.post('/api/users', async (req, res) => {
+  try {
+    const {
+      name, email, password, role, permissions, active, phone
+    } = req.body;
+    
+    // Check if email already exists
+    const existingUser = await pool.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
+    
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ error: 'Email already in use' });
+    }
+    
+    const result = await pool.query(`
+      INSERT INTO users
+      (name, email, password_hash, password, role, permissions, active, phone)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *
+    `, [
+      name, 
+      email, 
+      '$2a$10$qLJZFgMoE8vg7NYgDRbZZ.lxK1SFwQn96MNKMoXB1jJjfVbQMQaXm', // Dummy hash
+      password, 
+      role, 
+      JSON.stringify(permissions), 
+      active,
+      phone
+    ]);
+    
+    const row = result.rows[0];
+    const user = {
+      id: row.id.toString(),
+      name: row.name,
+      email: row.email,
+      password: row.password,
+      role: row.role,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      active: row.active,
+      phone: row.phone,
+      permissions: row.permissions
+    };
+    
+    res.status(201).json(user);
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      name, email, password, role, permissions, active, phone
+    } = req.body;
+    
+    let queryParams = [
+      name, email, role, JSON.stringify(permissions), active, phone, id
+    ];
+    
+    let query = `
+      UPDATE users
+      SET name = $1, email = $2, role = $3, permissions = $4, active = $5, phone = $6, updated_at = NOW()
+    `;
+    
+    // Include password in update only if provided
+    if (password) {
+      query += `, password_hash = $7, password = $8 WHERE id = $9`;
+      queryParams = [
+        name, email, role, JSON.stringify(permissions), active, phone,
+        '$2a$10$qLJZFgMoE8vg7NYgDRbZZ.lxK1SFwQn96MNKMoXB1jJjfVbQMQaXm', // Dummy hash
+        password, id
+      ];
+    } else {
+      query += ` WHERE id = $7`;
+    }
+    
+    const result = await pool.query(query, queryParams);
+    
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error(`Error updating user ${req.params.id}:`, error);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Prevent deleting the last admin
+    const adminCountResult = await pool.query(
+      "SELECT COUNT(*) FROM users WHERE role = 'admin' AND active = true"
+    );
+    
+    const userRoleResult = await pool.query(
+      "SELECT role FROM users WHERE id = $1",
+      [id]
+    );
+    
+    if (userRoleResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const isAdmin = userRoleResult.rows[0].role === 'admin';
+    const adminCount = parseInt(adminCountResult.rows[0].count);
+    
+    if (isAdmin && adminCount <= 1) {
+      return res.status(400).json({ 
+        error: 'Cannot delete the last admin user' 
+      });
+    }
+    
+    const result = await pool.query('DELETE FROM users WHERE id = $1', [id]);
+    
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error(`Error deleting user ${req.params.id}:`, error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+app.put('/api/users/batch', async (req, res) => {
+  try {
+    const users = req.body;
+    
+    if (!Array.isArray(users)) {
+      return res.status(400).json({ error: 'Expected an array of users' });
+    }
+    
+    // Update each user
+    for (const user of users) {
+      let queryParams = [
+        user.name, user.email, user.role, 
+        JSON.stringify(user.permissions), 
+        user.active, 
+        user.phone || null,
+        user.id
+      ];
+      
+      let query = `
+        UPDATE users
+        SET name = $1, email = $2, role = $3, permissions = $4, active = $5, phone = $6, updated_at = NOW()
+      `;
+      
+      // Include password in update only if changed
+      if (user.password && !user.password.startsWith('$2a$')) {
+        query += `, password_hash = $7, password = $8 WHERE id = $9`;
+        queryParams = [
+          user.name, user.email, user.role, 
+          JSON.stringify(user.permissions), 
+          user.active, 
+          user.phone || null,
+          '$2a$10$qLJZFgMoE8vg7NYgDRbZZ.lxK1SFwQn96MNKMoXB1jJjfVbQMQaXm', // Dummy hash
+          user.password, 
+          user.id
+        ];
+      } else {
+        query += ` WHERE id = $7`;
+      }
+      
+      await pool.query(query, queryParams);
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating users in batch:', error);
+    res.status(500).json({ error: 'Failed to update users' });
   }
 });
 
@@ -471,7 +791,9 @@ app.get('/api/orders', async (req, res) => {
           price: parseFloat(item.unit_price)
         },
         quantity: item.quantity,
-        price: parseFloat(item.unit_price)
+        price: parseFloat(item.unit_price),
+        discount: parseFloat(item.discount || 0),
+        taxAmount: parseFloat(item.tax_amount || 0)
       });
     });
     
@@ -484,11 +806,16 @@ app.get('/api/orders', async (req, res) => {
       },
       items: itemsByOrder[row.id.toString()] || [],
       totalAmount: parseFloat(row.total_amount),
-      transactionId: row.payment_method,
+      subtotal: parseFloat(row.subtotal || 0),
+      discountTotal: parseFloat(row.discount_total || 0),
+      taxTotal: parseFloat(row.tax_total || 0),
+      applyTax: row.apply_tax || false,
+      transactionId: row.transaction_id || '',
       status: row.status,
       trackingId: row.tracking_id || '',
-      trackingUrl: '',
-      dispatchImage: '',
+      trackingUrl: row.tracking_url || '',
+      dispatchImage: row.dispatch_image || '',
+      notes: row.notes || '',
       createdAt: row.order_date,
       updatedAt: row.updated_at,
       createdBy: row.created_by ? row.created_by.toString() : ''
@@ -498,6 +825,149 @@ app.get('/api/orders', async (req, res) => {
   } catch (error) {
     console.error('Error fetching orders:', error);
     res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+});
+
+app.post('/api/orders', async (req, res) => {
+  try {
+    const {
+      customerId, items, totalAmount, subtotal, discountTotal, taxTotal,
+      applyTax, transactionId, status, notes, createdBy
+    } = req.body;
+    
+    // Start a transaction
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Create the order
+      const orderResult = await client.query(`
+        INSERT INTO orders
+        (customer_id, total_amount, subtotal, discount_total, tax_total, apply_tax, 
+         transaction_id, status, notes, created_by)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING *
+      `, [
+        customerId, totalAmount, subtotal, discountTotal, taxTotal,
+        applyTax, transactionId, status, notes, createdBy
+      ]);
+      
+      const orderId = orderResult.rows[0].id;
+      
+      // Insert order items
+      for (const item of items) {
+        await client.query(`
+          INSERT INTO order_items
+          (order_id, product_id, product_name, quantity, unit_price, 
+           discount, tax_amount, total_price)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `, [
+          orderId,
+          item.productId,
+          item.product.name,
+          item.quantity,
+          item.price,
+          item.discount || 0,
+          item.taxAmount || 0,
+          (item.price * item.quantity) - (item.discount || 0) + (item.taxAmount || 0)
+        ]);
+        
+        // Update product stock
+        await client.query(`
+          UPDATE products
+          SET stock = stock - $1, sales = sales + $1, updated_at = NOW()
+          WHERE id = $2
+        `, [item.quantity, item.productId]);
+      }
+      
+      await client.query('COMMIT');
+      
+      const newOrder = {
+        id: orderId.toString(),
+        customerId,
+        items,
+        totalAmount,
+        subtotal,
+        discountTotal,
+        taxTotal,
+        applyTax,
+        transactionId,
+        status,
+        notes,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: createdBy ? createdBy.toString() : ''
+      };
+      
+      res.status(201).json(newOrder);
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error creating order:', error);
+    res.status(500).json({ error: 'Failed to create order' });
+  }
+});
+
+app.put('/api/orders/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      status, trackingId, trackingUrl, dispatchImage, notes
+    } = req.body;
+    
+    const result = await pool.query(`
+      UPDATE orders
+      SET status = $1, tracking_id = $2, tracking_url = $3, 
+          dispatch_image = $4, notes = $5, updated_at = NOW()
+      WHERE id = $6
+      RETURNING *
+    `, [status, trackingId, trackingUrl, dispatchImage, notes, id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error(`Error updating order ${req.params.id}:`, error);
+    res.status(500).json({ error: 'Failed to update order' });
+  }
+});
+
+app.put('/api/orders/batch', async (req, res) => {
+  try {
+    const orders = req.body;
+    
+    if (!Array.isArray(orders)) {
+      return res.status(400).json({ error: 'Expected an array of orders' });
+    }
+    
+    // Update each order
+    for (const order of orders) {
+      await pool.query(`
+        UPDATE orders
+        SET status = $1, tracking_id = $2, tracking_url = $3,
+            dispatch_image = $4, notes = $5, updated_at = NOW()
+        WHERE id = $6
+      `, [
+        order.status,
+        order.trackingId || null,
+        order.trackingUrl || null,
+        order.dispatchImage || null,
+        order.notes || null,
+        order.id
+      ]);
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating orders in batch:', error);
+    res.status(500).json({ error: 'Failed to update orders' });
   }
 });
 
@@ -514,18 +984,77 @@ app.get('/api/company-settings', async (req, res) => {
     const settings = {
       id: row.id.toString(),
       companyName: row.company_name,
+      name: row.name || row.company_name,
+      appName: row.app_name || row.company_name,
       address: row.address,
+      city: row.city || '',
+      state: row.state || '',
+      pincode: row.pincode || '',
       phone: row.phone,
       email: row.email,
       taxId: row.tax_id,
       logoUrl: row.logo_url,
-      currency: row.currency
+      logo: row.logo || row.logo_url,
+      website: row.website || '',
+      currency: row.currency,
+      socialMedia: row.social_media || { facebook: '', instagram: '', twitter: '' }
     };
     
     res.json(settings);
   } catch (error) {
     console.error('Error fetching company settings:', error);
     res.status(500).json({ error: 'Failed to fetch company settings' });
+  }
+});
+
+app.put('/api/company-settings', async (req, res) => {
+  try {
+    const {
+      companyName, name, appName, address, city, state, pincode,
+      phone, email, taxId, logoUrl, logo, website, currency, socialMedia
+    } = req.body;
+    
+    // Check if settings exist
+    const checkResult = await pool.query('SELECT COUNT(*) FROM company_settings');
+    const exists = parseInt(checkResult.rows[0].count) > 0;
+    
+    let result;
+    if (exists) {
+      result = await pool.query(`
+        UPDATE company_settings
+        SET company_name = $1, name = $2, app_name = $3, address = $4, 
+            city = $5, state = $6, pincode = $7, phone = $8, email = $9, 
+            tax_id = $10, logo_url = $11, logo = $12, website = $13, 
+            currency = $14, social_media = $15, updated_at = NOW()
+        WHERE id = 1
+        RETURNING *
+      `, [
+        companyName, name, appName, address, city, state, pincode,
+        phone, email, taxId, logoUrl, logo, website, currency, 
+        JSON.stringify(socialMedia)
+      ]);
+    } else {
+      result = await pool.query(`
+        INSERT INTO company_settings
+        (company_name, name, app_name, address, city, state, pincode, 
+         phone, email, tax_id, logo_url, logo, website, currency, social_media)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        RETURNING *
+      `, [
+        companyName, name, appName, address, city, state, pincode,
+        phone, email, taxId, logoUrl, logo, website, currency, 
+        JSON.stringify(socialMedia)
+      ]);
+    }
+    
+    if (result.rows.length === 0) {
+      return res.status(500).json({ error: 'Failed to update company settings' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating company settings:', error);
+    res.status(500).json({ error: 'Failed to update company settings' });
   }
 });
 

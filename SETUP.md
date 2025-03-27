@@ -10,7 +10,7 @@ This guide will help you set up the database for the Apparel Management System.
 
 ## Setup Steps
 
-### 1. Set up the database
+### 1. Create a new PostgreSQL database
 
 Create a new PostgreSQL database for the application:
 
@@ -18,7 +18,7 @@ Create a new PostgreSQL database for the application:
 CREATE DATABASE apparel_management;
 ```
 
-### 2. Set the DATABASE_URL environment variable
+### 2. Set the DATABASE_URL environment variable (REQUIRED)
 
 The application **requires** a `DATABASE_URL` environment variable to connect to your PostgreSQL database.
 
@@ -54,6 +54,8 @@ setup-db.bat
 
 These scripts will create all the necessary tables and default data in your database.
 
+Alternatively, the application will automatically try to initialize the database when you first log in if the connection is successful but the schema is not set up yet.
+
 ### 4. Verify database connection
 
 Run the check-api script to verify that your database connection is working:
@@ -74,7 +76,7 @@ The application should now be running at http://localhost:3000
 
 ## Troubleshooting
 
-If you're experiencing any issues with the database connection:
+If you're experiencing database connection issues:
 
 1. Check if the `DATABASE_URL` is correctly set:
    ```
@@ -97,10 +99,16 @@ If you're experiencing any issues with the database connection:
    node src/scripts/check-api.js
    ```
 
-5. If all else fails, initialize the database manually:
+5. If the database URL is correct but the application still can't connect, check if your PostgreSQL server is configured to accept connections:
+   - Verify that your `pg_hba.conf` file allows connections from your application
+   - Ensure that PostgreSQL is listening on the specified port (usually 5432)
+
+6. Check for any SSL requirements. If your database requires SSL, modify the connection URL:
    ```
-   psql -h localhost -U username -d apparel_management -f database/schema.sql
+   postgres://username:password@localhost:5432/apparel_management?sslmode=require
    ```
+
+7. If all else fails, the application will fall back to using local storage for data persistence. While this allows you to use the application, your data won't be saved to the database until the connection issue is resolved.
 
 ## Default Login Credentials
 
@@ -113,6 +121,16 @@ Once the database is set up, you can log in with these default credentials:
 - **Manager User**: 
   - Email: manager@example.com
   - Password: password
+
+## Logging and Debugging
+
+The application logs database connection status and errors to the console. Check the server logs if you're experiencing issues:
+
+```bash
+npm start
+```
+
+Watch the console output for any error messages related to database connections.
 
 ## Database Schema
 

@@ -200,6 +200,45 @@ export const getCustomers = async (): Promise<Customer[]> => {
   }
 };
 
+export const createCustomer = async (customer: Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'orders'>): Promise<Customer | null> => {
+  try {
+    return await fetchApi(`${API_BASE_URL}/customers`, {
+      method: 'POST',
+      body: JSON.stringify(customer)
+    });
+  } catch (error) {
+    console.error('Error creating customer:', error);
+    return null;
+  }
+};
+
+export const updateCustomer = async (customer: Customer): Promise<boolean> => {
+  try {
+    await fetchApi(`${API_BASE_URL}/customers/${customer.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(customer)
+    });
+    
+    return true;
+  } catch (error) {
+    console.error(`Error updating customer ${customer.id}:`, error);
+    return false;
+  }
+};
+
+export const deleteCustomer = async (id: string): Promise<boolean> => {
+  try {
+    await fetchApi(`${API_BASE_URL}/customers/${id}`, {
+      method: 'DELETE'
+    });
+    
+    return true;
+  } catch (error) {
+    console.error(`Error deleting customer ${id}:`, error);
+    return false;
+  }
+};
+
 export const saveCustomers = async (customers: Customer[]): Promise<boolean> => {
   try {
     await fetchApi(`${API_BASE_URL}/customers/batch`, {
@@ -224,6 +263,32 @@ export const getOrders = async (): Promise<Order[]> => {
   }
 };
 
+export const createOrder = async (order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>): Promise<Order | null> => {
+  try {
+    return await fetchApi(`${API_BASE_URL}/orders`, {
+      method: 'POST',
+      body: JSON.stringify(order)
+    });
+  } catch (error) {
+    console.error('Error creating order:', error);
+    return null;
+  }
+};
+
+export const updateOrder = async (order: Order): Promise<boolean> => {
+  try {
+    await fetchApi(`${API_BASE_URL}/orders/${order.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(order)
+    });
+    
+    return true;
+  } catch (error) {
+    console.error(`Error updating order ${order.id}:`, error);
+    return false;
+  }
+};
+
 export const saveOrders = async (orders: Order[]): Promise<boolean> => {
   try {
     await fetchApi(`${API_BASE_URL}/orders/batch`, {
@@ -245,6 +310,45 @@ export const getUsers = async (): Promise<User[]> => {
   } catch (error) {
     console.error('Error fetching users:', error);
     return [];
+  }
+};
+
+export const createUser = async (user: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User | null> => {
+  try {
+    return await fetchApi(`${API_BASE_URL}/users`, {
+      method: 'POST',
+      body: JSON.stringify(user)
+    });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    return null;
+  }
+};
+
+export const updateUser = async (user: User): Promise<boolean> => {
+  try {
+    await fetchApi(`${API_BASE_URL}/users/${user.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(user)
+    });
+    
+    return true;
+  } catch (error) {
+    console.error(`Error updating user ${user.id}:`, error);
+    return false;
+  }
+};
+
+export const deleteUser = async (id: string): Promise<boolean> => {
+  try {
+    await fetchApi(`${API_BASE_URL}/users/${id}`, {
+      method: 'DELETE'
+    });
+    
+    return true;
+  } catch (error) {
+    console.error(`Error deleting user ${id}:`, error);
+    return false;
   }
 };
 
@@ -286,6 +390,44 @@ export const saveCompanySettings = async (settings: CompanySettings): Promise<bo
   }
 };
 
+// API validation function
+export const validateDatabaseConnection = async (): Promise<{
+  success: boolean;
+  message: string;
+  tables?: string[];
+  counts?: Record<string, number>;
+}> => {
+  try {
+    const result = await fetchApi(`${API_BASE_URL}/validate-db`);
+    return result;
+  } catch (error) {
+    console.error('Error validating database:', error);
+    return { 
+      success: false, 
+      message: `Database validation failed: ${error.message}` 
+    };
+  }
+};
+
+// Database initialization function
+export const initializeDatabase = async (): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  try {
+    const result = await fetchApi(`${API_BASE_URL}/initialize-db`, {
+      method: 'POST'
+    });
+    return result;
+  } catch (error) {
+    console.error('Error initializing database:', error);
+    return { 
+      success: false, 
+      message: `Database initialization failed: ${error.message}` 
+    };
+  }
+};
+
 // Login function
 export const loginUser = async (email: string, password: string): Promise<User | null> => {
   try {
@@ -313,12 +455,22 @@ export default {
   getStockHistoryByProduct,
   getAllStockHistory,
   getCustomers,
+  createCustomer,
+  updateCustomer,
+  deleteCustomer,
   getOrders,
+  createOrder,
+  updateOrder,
   getUsers,
+  createUser,
+  updateUser,
+  deleteUser,
   getCompanySettings,
   saveCustomers,
   saveOrders,
   saveUsers,
   saveCompanySettings,
+  validateDatabaseConnection,
+  initializeDatabase,
   loginUser
 };
