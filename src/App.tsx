@@ -24,6 +24,7 @@ import CompanySettings from "@/pages/CompanySettings";
 import CustomerCategories from "@/pages/CustomerCategories";
 import Index from "@/pages/Index";
 import RevenueReport from "@/pages/RevenueReport";
+import EditCustomer from "@/pages/EditCustomer";
 
 function App() {
   return (
