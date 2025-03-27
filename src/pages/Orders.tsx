@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import MainLayout from "@/components/layout/MainLayout";
@@ -9,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { OrderStatus } from "@/types";
-import { Search, Plus, FileDown, Printer, MoreHorizontal, Eye } from "lucide-react";
+import { Search, Plus, FileDown, Printer, MoreHorizontal, Eye, Edit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import NoContent from "@/components/NoContent";
 import { ShoppingBag } from "lucide-react";
