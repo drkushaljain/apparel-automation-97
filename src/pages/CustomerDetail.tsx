@@ -25,9 +25,10 @@ const CustomerDetail = () => {
   // Calculate total purchase value
   const totalPurchaseValue = customerOrders.reduce((sum, order) => sum + order.totalAmount, 0);
 
-  // Check if user has permission to edit customers
-  const canEditCustomer = currentUser?.role === "admin" || currentUser?.role === "manager" || 
-                         (currentUser?.permissions && currentUser.permissions.canManageCustomers);
+  // Improved permission check for editing customers
+  const canEditCustomer = currentUser?.role === "admin" || 
+                         currentUser?.role === "manager" || 
+                         (currentUser?.permissions && currentUser.permissions.canManageCustomers === true);
 
   useEffect(() => {
     if (customer?.category) {
@@ -71,6 +72,7 @@ const CustomerDetail = () => {
         )}
       </div>
 
+      {/* Customer information sections */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Customer Profile */}
         <Card className="md:col-span-1">

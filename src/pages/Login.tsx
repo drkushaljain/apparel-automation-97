@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { initPostgresConnection } from "@/services/postgresService";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Login = () => {
   const { state, login } = useAppContext();
@@ -17,24 +19,30 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingDb, setIsCheckingDb] = useState(true);
   const [dbConnected, setDbConnected] = useState<boolean | null>(null);
   
-  // Check database connection
+  // Check database connection with improved UX
   const checkDbConnection = async () => {
+    setIsCheckingDb(true);
     try {
       const connected = await initPostgresConnection();
       setDbConnected(connected);
       if (!connected) {
-        toast.warning("Database connection failed. System will use local storage for data persistence.", {
+        toast.warning("Using local storage for data persistence", {
+          description: "Database connection unavailable",
           duration: 5000,
         });
       }
     } catch (error) {
       console.error("Error checking database connection:", error);
       setDbConnected(false);
-      toast.warning("Database connection failed. System will use local storage for data persistence.", {
+      toast.warning("Using local storage for data persistence", {
+        description: "Database connection failed",
         duration: 5000,
       });
+    } finally {
+      setIsCheckingDb(false);
     }
   };
   
@@ -43,12 +51,19 @@ const Login = () => {
     checkDbConnection();
   }, []);
   
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!email || !password) {
-      toast.error("Please enter both email and password");
+    // Client-side validation
+    if (!email.trim()) {
+      toast.error("Email is required");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!password.trim()) {
+      toast.error("Password is required");
       setIsLoading(false);
       return;
     }
@@ -76,15 +91,20 @@ const Login = () => {
       return;
     }
 
-    // Successful login
-    login(user);
-    toast.success(`Welcome back, ${user.name}!`);
-    navigate("/");
-    setIsLoading(false);
+    // Simulate a short delay for better UX
+    setTimeout(() => {
+      // Successful login
+      login(user);
+      toast.success(`Welcome back, ${user.name}!`);
+      navigate("/");
+      setIsLoading(false);
+    }, 500);
   };
 
   // Create a default admin user if no users exist
   const createDefaultAdmin = () => {
+    setIsLoading(true);
+    
     if (users.length === 0) {
       const defaultAdmin = {
         id: "user_1",
@@ -107,9 +127,13 @@ const Login = () => {
         updatedAt: new Date()
       };
       
-      login(defaultAdmin);
-      navigate("/");
-      toast.success("Logged in as default admin user");
+      // Simulate a short delay for better UX
+      setTimeout(() => {
+        login(defaultAdmin);
+        navigate("/");
+        toast.success("Logged in as default admin user");
+        setIsLoading(false);
+      }, 500);
     }
   };
 
@@ -120,11 +144,21 @@ const Login = () => {
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="text-2xl font-bold">Apparel Management</CardTitle>
             <CardDescription>Enter your credentials to sign in</CardDescription>
-            {dbConnected === false && (
-              <div className="text-amber-500 text-sm mt-2 bg-amber-50 py-1 px-2 rounded-md">
-                <p>Database connection failed. Using local storage instead.</p>
+            
+            {/* Database connection status with better UI */}
+            {isCheckingDb ? (
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mt-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Checking database connection...</span>
               </div>
-            )}
+            ) : dbConnected === false ? (
+              <Alert variant="warning" className="mt-2 bg-amber-50 border-amber-200">
+                <AlertCircle className="h-4 w-4 text-amber-500" />
+                <AlertDescription className="text-amber-700 text-xs">
+                  Database connection unavailable. Using local storage instead.
+                </AlertDescription>
+              </Alert>
+            ) : null}
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
@@ -136,6 +170,7 @@ const Login = () => {
                   placeholder="email@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -148,30 +183,44 @@ const Login = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
                 />
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Signing in..." : "Sign In"}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Signing in...
+                  </>
+                ) : "Sign In"}
               </Button>
             </form>
           </CardContent>
           <CardFooter className="flex flex-col">
             {users.length === 0 && (
               <div className="w-full mb-4">
-                <div className="bg-muted p-3 rounded-md text-sm text-center">
-                  <p className="font-medium">No users found in the system</p>
-                  <p className="text-muted-foreground mt-1">Click below to create and login as default admin</p>
-                </div>
+                <Alert className="bg-primary/5 border-primary/20 mb-3">
+                  <AlertDescription className="text-sm">
+                    <p className="font-medium">No users found in the system</p>
+                    <p className="text-muted-foreground mt-1">Create and login as default admin</p>
+                  </AlertDescription>
+                </Alert>
                 <Button 
-                  variant="outline" 
-                  className="w-full mt-3"
+                  variant="default" 
+                  className="w-full"
                   onClick={createDefaultAdmin}
+                  disabled={isLoading}
                 >
-                  Create Default Admin
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Creating Admin...
+                    </>
+                  ) : "Create Default Admin"}
                 </Button>
               </div>
             )}
-            <div className="text-center text-sm text-muted-foreground w-full">
+            <div className="text-center text-sm text-muted-foreground w-full p-2 bg-muted/50 rounded-md">
               <p>Demo credentials: admin@example.com / admin123</p>
             </div>
           </CardFooter>
