@@ -3,6 +3,7 @@ import { Customer, Order, OrderStatus, Product, User, CompanySettings, StockHist
 import { toast } from 'sonner';
 import * as dbService from '@/services/dbService';
 import { format } from 'date-fns';
+import { ensureCurrencyPrecision } from '@/lib/utils';
 
 // Default users for fallback
 const DEFAULT_USERS: User[] = [
@@ -138,12 +139,27 @@ const reducer = (state: AppState, action: AppAction): AppState => {
     case 'SET_PRODUCTS':
       return { ...state, products: action.payload };
     case 'ADD_PRODUCT':
-      return { ...state, products: [...state.products, action.payload] };
+      return { 
+        ...state, 
+        products: [...state.products, {
+          ...action.payload,
+          price: ensureCurrencyPrecision(action.payload.price),
+          taxPercentage: action.payload.taxPercentage ? 
+            ensureCurrencyPrecision(action.payload.taxPercentage) : 
+            undefined
+        }] 
+      };
     case 'UPDATE_PRODUCT':
       return {
         ...state,
         products: state.products.map(product => 
-          product.id === action.payload.id ? action.payload : product
+          product.id === action.payload.id ? {
+            ...action.payload,
+            price: ensureCurrencyPrecision(action.payload.price),
+            taxPercentage: action.payload.taxPercentage ? 
+              ensureCurrencyPrecision(action.payload.taxPercentage) : 
+              undefined
+          } : product
         )
       };
     case 'DELETE_PRODUCT':
@@ -240,7 +256,6 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  // Check for saved user session on first load
   useEffect(() => {
     const savedUser = localStorage.getItem('current_user');
     if (savedUser) {
@@ -259,7 +274,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       dispatch({ type: 'SET_LOADING', payload: true });
       
       try {
-        // Initialize database connection
         const isPostgresAvailable = await dbService.initDatabase();
         
         if (!isPostgresAvailable) {
@@ -268,16 +282,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           });
         }
         
-        // Load initial data
         const { products, customers, orders, users, companySettings, stockHistory } = 
           await dbService.loadInitialData();
 
-        // Set all data in state
-        dispatch({ type: 'SET_PRODUCTS', payload: products });
-        dispatch({ type: 'SET_CUSTOMERS', payload: customers });
-        dispatch({ type: 'SET_ORDERS', payload: orders });
-
-        // Process users data
         let updatedUsers = users;
         if (updatedUsers.length === 0) {
           updatedUsers = DEFAULT_USERS;
@@ -321,11 +328,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     
     loadData();
   }, []);
-  
+
   const addProduct = (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newProduct: Product = {
       ...productData,
       id: `p${state.products.length + 1}`,
+      price: ensureCurrencyPrecision(productData.price),
+      taxPercentage: productData.taxPercentage ? 
+        ensureCurrencyPrecision(productData.taxPercentage) : 
+        undefined,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -337,6 +348,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const updateProduct = (product: Product) => {
     const updatedProduct = {
       ...product,
+      price: ensureCurrencyPrecision(product.price),
+      taxPercentage: product.taxPercentage ? 
+        ensureCurrencyPrecision(product.taxPercentage) : 
+        undefined,
       updatedAt: new Date()
     };
     
@@ -371,6 +386,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const newOrder: Order = {
       ...orderData,
       id: `o${state.orders.length + 1}`,
+      items: orderData.items.map(item => ({
+        ...item,
+        price: ensureCurrencyPrecision(item.price),
+        discount: item.discount ? ensureCurrencyPrecision(item.discount) : undefined,
+        taxAmount: item.taxAmount ? ensureCurrencyPrecision(item.taxAmount) : undefined
+      })),
+      totalAmount: ensureCurrencyPrecision(orderData.totalAmount),
+      subtotal: orderData.subtotal ? ensureCurrencyPrecision(orderData.subtotal) : undefined,
+      discountTotal: orderData.discountTotal ? ensureCurrencyPrecision(orderData.discountTotal) : undefined,
+      taxTotal: orderData.taxTotal ? ensureCurrencyPrecision(orderData.taxTotal) : undefined,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -391,6 +416,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const updateOrder = (order: Order) => {
     const updatedOrder = {
       ...order,
+      items: order.items.map(item => ({
+        ...item,
+        price: ensureCurrencyPrecision(item.price),
+        discount: item.discount ? ensureCurrencyPrecision(item.discount) : undefined,
+        taxAmount: item.taxAmount ? ensureCurrencyPrecision(item.taxAmount) : undefined
+      })),
+      totalAmount: ensureCurrencyPrecision(order.totalAmount),
+      subtotal: order.subtotal ? ensureCurrencyPrecision(order.subtotal) : undefined,
+      discountTotal: order.discountTotal ? ensureCurrencyPrecision(order.discountTotal) : undefined,
+      taxTotal: order.taxTotal ? ensureCurrencyPrecision(order.taxTotal) : undefined,
       updatedAt: new Date()
     };
     

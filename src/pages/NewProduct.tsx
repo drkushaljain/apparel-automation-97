@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -11,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Upload } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ensureCurrencyPrecision } from "@/lib/utils";
 
 const NewProduct = () => {
   const { addProduct } = useAppContext();
@@ -34,7 +34,6 @@ const NewProduct = () => {
       const file = e.target.files[0];
       setImageFile(file);
       
-      // Create preview
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
@@ -51,7 +50,6 @@ const NewProduct = () => {
     
     let finalImageUrl = imageUrl;
     
-    // If using file upload, convert to base64
     if (activeTab === "upload" && imageFile) {
       const reader = new FileReader();
       finalImageUrl = await new Promise<string>((resolve) => {
@@ -64,21 +62,42 @@ const NewProduct = () => {
       });
     }
     
+    const roundedPrice = ensureCurrencyPrecision(price);
+    const roundedTaxPercentage = ensureCurrencyPrecision(taxPercentage);
+    
     addProduct({
       name,
       description,
-      price,
+      price: roundedPrice,
       imageUrl: finalImageUrl,
       category,
       isAvailable,
       sku,
-      taxPercentage,
+      taxPercentage: roundedTaxPercentage,
       stock: 0,
       sales: 0
     });
     
     setIsLoading(false);
     navigate("/products");
+  };
+
+  const handlePriceChange = (value: string) => {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      setPrice(numValue);
+    } else if (value === '') {
+      setPrice(0);
+    }
+  };
+
+  const handleTaxChange = (value: string) => {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      setTaxPercentage(numValue);
+    } else if (value === '') {
+      setTaxPercentage(0);
+    }
   };
 
   return (
@@ -124,7 +143,7 @@ const NewProduct = () => {
                     id="price"
                     type="number"
                     value={price}
-                    onChange={(e) => setPrice(Number(e.target.value))}
+                    onChange={(e) => handlePriceChange(e.target.value)}
                     placeholder="0.00"
                     min="0"
                     step="0.01"
@@ -157,7 +176,7 @@ const NewProduct = () => {
                     id="taxPercentage"
                     type="number"
                     value={taxPercentage}
-                    onChange={(e) => setTaxPercentage(Number(e.target.value))}
+                    onChange={(e) => handleTaxChange(e.target.value)}
                     placeholder="0"
                     min="0"
                     max="100"

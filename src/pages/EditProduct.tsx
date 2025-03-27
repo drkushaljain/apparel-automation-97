@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
@@ -11,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Save, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ensureCurrencyPrecision } from "@/lib/utils";
 
 const EditProduct = () => {
   const { id } = useParams<{ id: string }>();
@@ -37,10 +37,9 @@ const EditProduct = () => {
       if (product) {
         setName(product.name);
         setDescription(product.description || "");
-        setPrice(product.price);
+        setPrice(ensureCurrencyPrecision(product.price));
         setImageUrl(product.imageUrl || "");
         if (product.imageUrl) {
-          // If image starts with data:, it's an uploaded image
           if (product.imageUrl.startsWith('data:')) {
             setActiveTab("upload");
             setImagePreview(product.imageUrl);
@@ -52,7 +51,7 @@ const EditProduct = () => {
         setStock(product.stock);
         setSku(product.sku || "");
         setIsAvailable(product.isAvailable);
-        setTaxPercentage(product.taxPercentage || 0);
+        setTaxPercentage(ensureCurrencyPrecision(product.taxPercentage || 0));
       } else {
         toast.error("Product not found");
         navigate("/products");
@@ -65,7 +64,6 @@ const EditProduct = () => {
       const file = e.target.files[0];
       setImageFile(file);
       
-      // Create preview
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
@@ -94,7 +92,6 @@ const EditProduct = () => {
     
     let finalImageUrl = imageUrl;
     
-    // If using file upload, convert to base64
     if (activeTab === "upload") {
       if (imageFile) {
         const reader = new FileReader();
@@ -111,22 +108,43 @@ const EditProduct = () => {
       }
     }
     
+    const roundedPrice = ensureCurrencyPrecision(price);
+    const roundedTaxPercentage = ensureCurrencyPrecision(taxPercentage);
+    
     updateProduct({
       ...product,
       name,
       description,
-      price,
+      price: roundedPrice,
       imageUrl: finalImageUrl,
       category,
       stock,
       sku,
       isAvailable,
-      taxPercentage,
+      taxPercentage: roundedTaxPercentage,
     });
     
     setIsLoading(false);
     toast.success("Product updated successfully");
     navigate(`/products/${id}`);
+  };
+
+  const handlePriceChange = (value: string) => {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      setPrice(numValue);
+    } else if (value === '') {
+      setPrice(0);
+    }
+  };
+
+  const handleTaxChange = (value: string) => {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      setTaxPercentage(numValue);
+    } else if (value === '') {
+      setTaxPercentage(0);
+    }
   };
 
   if (!id) {
@@ -184,7 +202,7 @@ const EditProduct = () => {
                   id="price"
                   type="number"
                   value={price}
-                  onChange={(e) => setPrice(Number(e.target.value))}
+                  onChange={(e) => handlePriceChange(e.target.value)}
                   placeholder="0.00"
                   min="0"
                   step="0.01"
@@ -294,7 +312,7 @@ const EditProduct = () => {
                 id="taxPercentage"
                 type="number"
                 value={taxPercentage}
-                onChange={(e) => setTaxPercentage(Number(e.target.value))}
+                onChange={(e) => handleTaxChange(e.target.value)}
                 placeholder="0"
                 min="0"
                 max="100"
