@@ -28,7 +28,7 @@ const EditCustomer = () => {
   const [whatsapp, setWhatsapp] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
-  const [state, setState] = useState("");
+  const [stateValue, setStateValue] = useState("");
   const [pincode, setPincode] = useState("");
   const [category, setCategory] = useState("");
 
@@ -44,7 +44,7 @@ const EditCustomer = () => {
         setWhatsapp(foundCustomer.whatsapp);
         setAddress(foundCustomer.address);
         setCity(foundCustomer.city);
-        setState(foundCustomer.state);
+        setStateValue(foundCustomer.state);
         setPincode(foundCustomer.pincode);
         setCategory(foundCustomer.category || "");
       }
@@ -82,7 +82,7 @@ const EditCustomer = () => {
       whatsapp,
       address,
       city,
-      state,
+      state: stateValue,
       pincode,
       category: category || undefined,
     };
@@ -192,8 +192,8 @@ const EditCustomer = () => {
                   <Label htmlFor="state">State</Label>
                   <Input
                     id="state"
-                    value={state}
-                    onChange={(e) => setState(e.target.value)}
+                    value={stateValue}
+                    onChange={(e) => setStateValue(e.target.value)}
                     placeholder="State"
                   />
                 </div>

@@ -1,243 +1,188 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
-import { useToast } from "@/hooks/use-toast";
-import postgresService from '@/services/postgresService';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAppContext } from "@/contexts/AppContext";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { initPostgresConnection } from "@/services/postgresService";
 
-export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [dbStatus, setDbStatus] = useState<{ connected: boolean; message: string }>({
-    connected: false,
-    message: 'Checking database connection...'
-  });
-  
+const Login = () => {
+  const { state, login } = useAppContext();
+  const { users } = state;
   const navigate = useNavigate();
-  const { toast } = useToast();
   
-  useEffect(() => {
-    // Check database connection status on component mount
-    const checkDatabase = async () => {
-      try {
-        const result = await postgresService.initPostgresConnection();
-        setDbStatus({ 
-          connected: result.success, 
-          message: result.message 
-        });
-        
-        if (result.success) {
-          // If DB is connected, check if it's properly initialized
-          const validateResult = await postgresService.validateDatabaseConnection();
-          
-          if (!validateResult.success) {
-            console.log('Database needs initialization:', validateResult.message);
-            // Try to initialize the database if validation fails
-            const initResult = await postgresService.initializeDatabase();
-            if (initResult.success) {
-              toast({
-                title: "Database Initialized",
-                description: initResult.message,
-                duration: 5000
-              });
-            } else {
-              toast({
-                title: "Database Setup Issue",
-                description: initResult.message,
-                variant: "destructive",
-                duration: 5000
-              });
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error checking database:', error);
-        setDbStatus({ 
-          connected: false, 
-          message: `Database error: ${error.message}` 
-        });
-      }
-    };
-    
-    checkDatabase();
-  }, [toast]);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [dbConnected, setDbConnected] = useState<boolean | null>(null);
   
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    
+  // Check database connection
+  const checkDbConnection = async () => {
     try {
-      // First try to login using the PostgreSQL database
-      if (dbStatus.connected) {
-        const user = await postgresService.loginUser(email, password);
-        
-        if (user) {
-          // Store the user in localStorage
-          localStorage.setItem('currentUser', JSON.stringify(user));
-          toast({
-            title: "Login Successful",
-            description: `Welcome back, ${user.name}!`,
-          });
-          navigate('/dashboard');
-          return;
-        }
-      }
-      
-      // If PostgreSQL login fails or is not available, try local storage fallback
-      const usersJSON = localStorage.getItem('users');
-      const users = usersJSON ? JSON.parse(usersJSON) : [];
-      
-      const user = users.find((u: any) => 
-        u.email === email && u.password === password && u.active
-      );
-      
-      if (user) {
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        toast({
-          title: "Login Successful (Local Mode)",
-          description: `Welcome back, ${user.name}!`,
+      const connected = await initPostgresConnection();
+      setDbConnected(connected);
+      if (!connected) {
+        toast.warning("Database connection failed. System will use local storage for data persistence.", {
+          duration: 5000,
         });
-        navigate('/dashboard');
-        return;
       }
-      
-      // If we get here, login failed
-      setError('Invalid email or password');
     } catch (error) {
-      console.error('Login error:', error);
-      setError(`Login failed: ${error.message}`);
-    } finally {
-      setLoading(false);
+      console.error("Error checking database connection:", error);
+      setDbConnected(false);
+      toast.warning("Database connection failed. System will use local storage for data persistence.", {
+        duration: 5000,
+      });
     }
   };
   
-  const retryConnection = async () => {
-    setDbStatus({ connected: false, message: 'Reconnecting...' });
-    try {
-      const result = await postgresService.initPostgresConnection();
-      setDbStatus({ 
-        connected: result.success, 
-        message: result.message 
-      });
+  // Check database connection on component mount
+  useState(() => {
+    checkDbConnection();
+  });
+  
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    if (!email || !password) {
+      toast.error("Please enter both email and password");
+      setIsLoading(false);
+      return;
+    }
+
+    // Find user by email
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+    if (!user) {
+      toast.error("Invalid email or password");
+      setIsLoading(false);
+      return;
+    }
+
+    // Check password
+    if (user.password !== password) {
+      toast.error("Invalid email or password");
+      setIsLoading(false);
+      return;
+    }
+
+    // Check if user is active
+    if (user.active === false) {
+      toast.error("Your account is inactive. Please contact an administrator.");
+      setIsLoading(false);
+      return;
+    }
+
+    // Successful login
+    login(user);
+    
+    // Store current user in localStorage for persistence
+    localStorage.setItem('current_user', JSON.stringify(user));
+    
+    toast.success(`Welcome back, ${user.name}!`);
+    navigate("/");
+    setIsLoading(false);
+  };
+
+  // Create a default admin user if no users exist
+  const createDefaultAdmin = () => {
+    if (users.length === 0) {
+      const defaultAdmin = {
+        id: "user_1",
+        name: "Admin User",
+        email: "admin@example.com",
+        password: "admin123",
+        role: "admin" as const,
+        active: true,
+        permissions: {
+          canViewDashboard: true,
+          canManageProducts: true,
+          canManageOrders: true,
+          canManageCustomers: true,
+          canManageUsers: true,
+          canExportData: true,
+          canSendMarketing: true,
+          canViewReports: true,
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
       
-      if (result.success) {
-        toast({
-          title: "Connection Successful",
-          description: "Successfully connected to the database.",
-        });
-      } else {
-        toast({
-          title: "Connection Failed",
-          description: result.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Error reconnecting:', error);
-      setDbStatus({ 
-        connected: false, 
-        message: `Reconnection error: ${error.message}` 
-      });
-      toast({
-        title: "Connection Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      login(defaultAdmin);
+      navigate("/");
+      toast.success("Logged in as default admin user");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md p-6 shadow-lg">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Apparel Management System
-          </h1>
-          <p className="text-gray-600 mt-1">Please sign in to continue</p>
-          
-          {/* Database connection status */}
-          <div className={`mt-4 p-2 rounded text-sm ${dbStatus.connected ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-            <p className="font-semibold">Database Status:</p>
-            <p>{dbStatus.message}</p>
-            {!dbStatus.connected && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={retryConnection} 
-                className="mt-2"
-              >
-                Retry Connection
+    <div className="h-screen flex items-center justify-center bg-muted/40">
+      <div className="max-w-md w-full px-4">
+        <Card className="border shadow-lg">
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-2xl font-bold">Apparel Management</CardTitle>
+            <CardDescription>Enter your credentials to sign in</CardDescription>
+            {dbConnected === false && (
+              <div className="text-amber-500 text-sm mt-2 bg-amber-50 py-1 px-2 rounded-md">
+                <p>Database connection failed. Using local storage instead.</p>
+              </div>
+            )}
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="email@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                </div>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Signing in..." : "Sign In"}
               </Button>
+            </form>
+          </CardContent>
+          <CardFooter className="flex flex-col">
+            {users.length === 0 && (
+              <div className="w-full mb-4">
+                <div className="bg-muted p-3 rounded-md text-sm text-center">
+                  <p className="font-medium">No users found in the system</p>
+                  <p className="text-muted-foreground mt-1">Click below to create and login as default admin</p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="w-full mt-3"
+                  onClick={createDefaultAdmin}
+                >
+                  Create Default Admin
+                </Button>
+              </div>
             )}
-            {!dbStatus.connected && (
-              <p className="text-xs mt-2">
-                You can still log in using local data. Default credentials are:<br />
-                Email: admin@example.com<br />
-                Password: password
-              </p>
-            )}
-          </div>
-        </div>
-        
-        <form onSubmit={handleLogin}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@example.com"
-                required
-              />
+            <div className="text-center text-sm text-muted-foreground w-full">
+              <p>Demo credentials: admin@example.com / admin123</p>
             </div>
-            
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-              />
-            </div>
-            
-            {error && (
-              <div className="text-red-500 text-sm">{error}</div>
-            )}
-            
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={loading}
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </Button>
-          </div>
-        </form>
-        
-        <div className="mt-6 text-center text-sm text-gray-600">
-          <p>Need help setting up the database?</p>
-          <p className="mt-1">
-            Make sure the <code>DATABASE_URL</code> environment variable is set correctly.
-          </p>
-          <p className="mt-1">
-            Check the <a href="/setup" className="text-blue-600 hover:underline">Setup Guide</a> for more information.
-          </p>
-        </div>
-      </Card>
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   );
-}
+};
+
+export default Login;
