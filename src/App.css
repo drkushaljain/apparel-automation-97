@@ -139,6 +139,27 @@
   transition: all 0.3s ease;
 }
 
+/* Consistent layout classes */
+.page-container {
+  @apply w-full max-w-7xl mx-auto;
+}
+
+.page-header {
+  @apply mb-6;
+}
+
+.page-title {
+  @apply text-2xl font-bold tracking-tight;
+}
+
+.section-container {
+  @apply mb-6;
+}
+
+.section-title {
+  @apply text-lg font-medium mb-3;
+}
+
 /* Mobile-specific styles */
 @media (max-width: 640px) {
   .mobile-card {
