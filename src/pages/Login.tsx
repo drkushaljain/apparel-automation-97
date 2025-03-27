@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Eye, EyeOff, LogIn, AlertCircle, LucideWifi, WifiOff } from "lucide-react";
+import { Eye, EyeOff, LogIn, AlertCircle, LucideWifi, WifiOff, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { UserRole } from "@/types";
 import * as postgresService from "@/services/postgresService";
@@ -21,57 +21,63 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState(false);
+  const [apiErrorMessage, setApiErrorMessage] = useState("");
   const [apiCheckLoading, setApiCheckLoading] = useState(true);
+
+  const checkApiStatus = async () => {
+    try {
+      setApiCheckLoading(true);
+      setApiErrorMessage("");
+      
+      // Try connecting to database first
+      const dbConnection = await postgresService.initPostgresConnection();
+      
+      if (dbConnection.success) {
+        setApiError(false);
+        console.log("Database connection successful");
+      } else {
+        console.error('Database connection failed:', dbConnection.message);
+        setApiError(true);
+        setApiErrorMessage(dbConnection.message);
+        
+        // Try general API health check as fallback
+        try {
+          const response = await fetch('/api/health', {
+            headers: { 'Accept': 'application/json' },
+            cache: 'no-store'
+          });
+          
+          if (response.ok) {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              const data = await response.json();
+              // API is working but database isn't
+              console.log('API is working but database connection failed');
+              setApiErrorMessage(`API is working but ${data.databaseConfigured ? 'database connection failed' : 'DATABASE_URL not configured'}`);
+            } else {
+              console.error('API returned non-JSON response');
+              setApiErrorMessage('API returned non-JSON response. Is the server running?');
+            }
+          } else {
+            console.error('API health check failed:', response.status);
+            setApiErrorMessage(`API health check failed with status ${response.status}`);
+          }
+        } catch (error) {
+          console.error('API connection error:', error);
+          setApiErrorMessage(`Cannot connect to server: ${error.message}`);
+        }
+      }
+    } catch (error) {
+      console.error('API status check error:', error);
+      setApiError(true);
+      setApiErrorMessage(`Error checking API status: ${error.message}`);
+    } finally {
+      setApiCheckLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Check if API is accessible
-    const checkApiStatus = async () => {
-      try {
-        setApiCheckLoading(true);
-        
-        // Try connecting to database first
-        const dbConnection = await postgresService.initPostgresConnection();
-        
-        if (dbConnection.success) {
-          setApiError(false);
-          console.log("Database connection successful");
-        } else {
-          console.error('Database connection failed:', dbConnection.message);
-          setApiError(true);
-          // Try general API health check as fallback
-          try {
-            const response = await fetch('/api/health', {
-              headers: { 'Accept': 'application/json' },
-              cache: 'no-store'
-            });
-            
-            if (response.ok) {
-              const contentType = response.headers.get('content-type');
-              if (contentType && contentType.includes('application/json')) {
-                // API is working but database isn't
-                console.log('API is working but database connection failed');
-                setApiError(true);
-              } else {
-                console.error('API returned non-JSON response');
-                setApiError(true);
-              }
-            } else {
-              console.error('API health check failed:', response.status);
-              setApiError(true);
-            }
-          } catch (error) {
-            console.error('API connection error:', error);
-            setApiError(true);
-          }
-        }
-      } catch (error) {
-        console.error('API status check error:', error);
-        setApiError(true);
-      } finally {
-        setApiCheckLoading(false);
-      }
-    };
-
     checkApiStatus();
   }, []);
 
@@ -172,8 +178,12 @@ const Login = () => {
         ) : apiError ? (
           <Alert variant="destructive" className="mb-4 animate-slide-up">
             <WifiOff className="h-4 w-4" />
-            <AlertDescription>
-              API server is unavailable. Login will use local authentication.
+            <AlertDescription className="flex flex-col gap-2">
+              <div>API server error: {apiErrorMessage}</div>
+              <div className="text-xs">Login will use local authentication. Click to retry:</div>
+              <Button variant="outline" size="sm" className="mt-1 self-start" onClick={checkApiStatus}>
+                <RefreshCw className="h-3 w-3 mr-2" /> Retry Connection
+              </Button>
             </AlertDescription>
           </Alert>
         ) : (

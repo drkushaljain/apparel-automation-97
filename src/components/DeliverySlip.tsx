@@ -1,194 +1,177 @@
 
-import { useRef } from "react";
-import { Order } from "@/types";
-import { useAppContext } from "@/contexts/AppContext";
-import { Button } from "@/components/ui/button";
+import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
-import { toast } from "sonner";
-import { Printer } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Order, CompanySettings } from "@/types";
+import { formatCurrency } from "@/lib/utils";
+import { Printer, ArrowLeft } from "lucide-react";
 
 interface DeliverySlipProps {
   order: Order;
+  onClose: () => void;
+  companySettings?: CompanySettings | null;
 }
 
-const DeliverySlip = ({ order }: DeliverySlipProps) => {
-  const printRef = useRef<HTMLDivElement>(null);
-  const { state } = useAppContext();
-  const { companySettings } = state;
-
-  const handlePrint = () => {
-    try {
-      const content = printRef.current;
-      if (!content) return;
-      
-      // Create a new window for printing
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        toast.error("Unable to open print window. Please check your popup blocker settings.");
-        return;
-      }
-      
-      // Add necessary styles
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Delivery Slip - Order #${order.id}</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-              .slip-container { max-width: 400px; margin: 0 auto; border: 2px solid #000; padding: 16px; }
-              .text-center { text-align: center; }
-              .border-b { border-bottom: 1px solid #ddd; padding-bottom: 12px; margin-bottom: 12px; }
-              .space-y-1 > * { margin-bottom: 8px; }
-              .font-bold { font-weight: bold; }
-              .text-sm { font-size: 0.875rem; }
-              .uppercase { text-transform: uppercase; }
-              .flex { display: flex; }
-              .justify-between { justify-content: space-between; }
-              .border-t { border-top: 1px solid #ddd; padding-top: 12px; margin-top: 12px; }
-              .pt-2 { padding-top: 8px; }
-              .mt-2 { margin-top: 8px; }
-              .company-logo { 
-                width: 100px; 
-                height: 60px; 
-                margin: 0 auto 10px; 
-                display: block; 
-                object-fit: contain;
-                object-position: center;
-              }
-              @media print {
-                body { margin: 0; padding: 0; }
-                .slip-container { border: none; max-width: 100%; }
-              }
-            </style>
-          </head>
-          <body>
-            <div class="slip-container">
-              ${content.innerHTML}
+const DeliverySlip: React.FC<DeliverySlipProps> = ({ order, onClose, companySettings }) => {
+  const printSlip = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
+    const printContent = document.getElementById('delivery-slip');
+    if (!printContent) return;
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Delivery Slip - Order #${order.id}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+            .slip-container { max-width: 800px; margin: 0 auto; }
+            .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+            .logo-container { width: 120px; height: 80px; display: flex; align-items: center; }
+            .logo { max-width: 100%; max-height: 100%; object-fit: contain; }
+            .company-info { text-align: right; }
+            .order-info { margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+            .customer-info { margin-bottom: 20px; }
+            .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            .items-table th, .items-table td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+            .total { text-align: right; margin-top: 20px; font-weight: bold; }
+            .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #666; }
+            @media print {
+              body { padding: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="slip-container">
+            ${printContent.innerHTML}
+            <div class="footer">
+              <p>Thank you for your business!</p>
+              <p>${companySettings?.companyName || 'Apparel Management System'} - ${new Date().toLocaleDateString()}</p>
             </div>
-            <script>
-              // Auto print
-              window.onload = function() {
-                window.print();
-                setTimeout(function() { window.close(); }, 500);
-              };
-            </script>
-          </body>
-        </html>
-      `);
-      
-      // Log the user who printed the slip
-      const currentUser = JSON.parse(localStorage.getItem('current_user') || '{}');
-      if (currentUser?.name) {
-        console.log(`Delivery slip for order #${order.id} printed by ${currentUser.name}`);
-        
-        // Store print log in localStorage
-        const printLogs = JSON.parse(localStorage.getItem('print_logs') || '[]');
-        printLogs.push({
-          action: 'print_delivery_slip',
-          orderId: order.id,
-          user: currentUser.name,
-          timestamp: new Date().toISOString()
-        });
-        localStorage.setItem('print_logs', JSON.stringify(printLogs));
-      }
-      
-      toast.success("Printing delivery slip");
-    } catch (error) {
-      console.error("Error printing:", error);
-      toast.error("Failed to print");
-    }
+          </div>
+          <script>
+            window.onload = function() { window.print(); window.close(); };
+          </script>
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button onClick={handlePrint} className="no-print">
-          <Printer className="h-4 w-4 mr-2" />
-          Print Delivery Slip
-        </Button>
-      </div>
-      
-      <Card className="border-2 p-0 max-w-md mx-auto">
-        <CardContent ref={printRef} className="p-6 space-y-4">
-          {/* Company Header */}
-          <div className="text-center border-b pb-4">
-            {companySettings?.logo && (
-              <div className="mb-2">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white">
+        <div className="sticky top-0 z-10 flex justify-between items-center p-4 bg-white border-b">
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back
+          </Button>
+          <Button variant="default" size="sm" onClick={printSlip}>
+            <Printer className="h-4 w-4 mr-2" /> Print
+          </Button>
+        </div>
+        
+        <CardContent className="p-6" id="delivery-slip">
+          <div className="flex justify-between items-start mb-8">
+            <div className="logo-container" style={{ width: '120px', height: '80px', display: 'flex', alignItems: 'center' }}>
+              {companySettings?.logoUrl ? (
                 <img 
-                  src={companySettings.logo} 
-                  alt={companySettings.name} 
-                  className="mx-auto h-16 w-24 object-contain"
-                  style={{ maxWidth: '100px', maxHeight: '60px', objectFit: 'contain' }}
+                  src={companySettings.logoUrl} 
+                  alt="Company Logo" 
+                  className="logo"
+                  style={{ 
+                    maxWidth: '100%', 
+                    maxHeight: '100%', 
+                    objectFit: 'contain'
+                  }} 
                 />
-              </div>
-            )}
-            <h2 className="text-xl font-bold">{companySettings?.name || "DELIVERY SLIP"}</h2>
-            <p className="text-sm text-muted-foreground">Order #{order.id}</p>
-          </div>
-          
-          {/* Company Details if available */}
-          {companySettings && (
-            <div className="text-center text-sm text-muted-foreground border-b pb-4">
-              <p>{companySettings.address}</p>
-              <p>{companySettings.city}, {companySettings.state} - {companySettings.pincode}</p>
-              <p>Phone: {companySettings.phone} | Email: {companySettings.email}</p>
-              {companySettings.taxId && <p>GST/Tax ID: {companySettings.taxId}</p>}
-            </div>
-          )}
-          
-          {/* Customer Details */}
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold uppercase">Deliver To:</h3>
-            <p className="font-bold">{order.customer.name}</p>
-            <p className="text-sm">{order.customer.address}</p>
-            <p className="text-sm">
-              {order.customer.city}, {order.customer.state} - {order.customer.pincode}
-            </p>
-            <p className="text-sm">Phone: {order.customer.phone}</p>
-          </div>
-          
-          {/* Order Details */}
-          <div className="space-y-2 border-t pt-4">
-            <h3 className="text-sm font-semibold uppercase">Order Summary:</h3>
-            <div className="space-y-1">
-              {order.items.map((item, index) => (
-                <div key={index} className="flex justify-between text-sm">
-                  <p>
-                    {item.product.name} x {item.quantity}
-                  </p>
-                  <p>₹{item.price * item.quantity}</p>
-                </div>
-              ))}
+              ) : (
+                <div className="text-lg font-bold">{companySettings?.companyName || 'Apparel Management System'}</div>
+              )}
             </div>
             
-            <div className="flex justify-between font-bold border-t pt-2 mt-2">
-              <p>Total</p>
-              <p>₹{order.totalAmount}</p>
+            <div className="company-info text-right">
+              <h3 className="text-lg font-bold">{companySettings?.companyName || 'Apparel Management System'}</h3>
+              <p className="text-sm text-gray-600">{companySettings?.address || '123 Business Street'}</p>
+              <p className="text-sm text-gray-600">{companySettings?.phone || '+91 9876543210'}</p>
+              <p className="text-sm text-gray-600">{companySettings?.email || 'contact@example.com'}</p>
+              {companySettings?.taxId && <p className="text-sm text-gray-600">TAX ID: {companySettings.taxId}</p>}
             </div>
           </div>
           
-          {/* Tracking Details */}
-          {order.trackingId && (
-            <div className="border-t pt-4">
-              <p className="text-sm font-semibold uppercase">Tracking ID:</p>
-              <p className="text-lg">{order.trackingId}</p>
+          <div className="bg-gray-100 p-4 rounded-md mb-6">
+            <div className="flex justify-between">
+              <div>
+                <h3 className="font-bold">DELIVERY SLIP</h3>
+                <p className="text-sm text-gray-600">Order ID: {order.id}</p>
+                <p className="text-sm text-gray-600">Date: {new Date(order.createdAt).toLocaleDateString()}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-semibold">Status: {order.status}</p>
+                {order.trackingId && <p className="text-sm text-gray-600">Tracking: {order.trackingId}</p>}
+              </div>
             </div>
-          )}
+          </div>
           
-          {/* Notes */}
-          {order.notes && (
-            <div className="border-t pt-4">
-              <p className="text-sm font-semibold uppercase">Notes:</p>
-              <p className="text-sm">{order.notes}</p>
+          <div className="mb-6">
+            <h4 className="font-semibold mb-2">Customer Information</h4>
+            <p className="text-sm">Name: {order.customer?.name || 'N/A'}</p>
+          </div>
+          
+          <div className="mb-6 overflow-x-auto">
+            <h4 className="font-semibold mb-2">Order Items</h4>
+            <table className="w-full min-w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left">Item</th>
+                  <th className="px-4 py-2 text-right">Quantity</th>
+                  <th className="px-4 py-2 text-right">Price</th>
+                  <th className="px-4 py-2 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {order.items.map((item, index) => (
+                  <tr key={item.id || index} className="border-b">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center">
+                        {item.product?.imageUrl && (
+                          <img 
+                            src={item.product.imageUrl} 
+                            alt={item.product?.name} 
+                            className="w-10 h-10 object-cover rounded mr-3" 
+                          />
+                        )}
+                        <span>{item.product?.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right">{item.quantity}</td>
+                    <td className="px-4 py-3 text-right">{formatCurrency(item.price)}</td>
+                    <td className="px-4 py-3 text-right">{formatCurrency(item.price * item.quantity)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="font-semibold">
+                  <td colSpan={3} className="px-4 py-3 text-right">Total:</td>
+                  <td className="px-4 py-3 text-right">{formatCurrency(order.totalAmount)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          
+          <div className="mt-8 pt-8 border-t">
+            <div className="grid grid-cols-2 gap-8">
+              <div>
+                <h4 className="font-semibold mb-2">Shipping Information</h4>
+                <p className="text-sm">Customer will be notified when the order is shipped.</p>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Notes</h4>
+                <p className="text-sm italic">Thank you for your business!</p>
+              </div>
             </div>
-          )}
-          
-          {/* Thank You Message */}
-          <div className="text-center border-t pt-4">
-            <p className="text-sm">Thank you for your order!</p>
-            {companySettings?.website && (
-              <p className="text-sm mt-1">{companySettings.website}</p>
-            )}
           </div>
         </CardContent>
       </Card>

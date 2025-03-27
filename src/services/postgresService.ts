@@ -60,15 +60,22 @@ const fetchApi = async (url, options = {}) => {
   const timeoutId = setTimeout(() => controller.abort(), 5000);
   
   try {
-    const response = await fetch(url, {
+    const defaultHeaders = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    
+    // Merge default headers with any provided headers
+    const mergedOptions = {
       ...options,
       signal: controller.signal,
       headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        ...defaultHeaders,
         ...(options.headers || {})
       }
-    });
+    };
+    
+    const response = await fetch(url, mergedOptions);
     
     clearTimeout(timeoutId);
     

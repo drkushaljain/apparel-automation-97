@@ -1,3 +1,4 @@
+
 const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');
@@ -9,6 +10,12 @@ dotenv.config();
 
 // Middleware to parse JSON requests
 app.use(express.json());
+
+// Middleware to log all API requests
+app.use('/api', (req, res, next) => {
+  console.log(`API Request: ${req.method} ${req.originalUrl}`);
+  next();
+});
 
 // Serve static files from the dist directory
 app.use(express.static(path.join(__dirname, 'dist')));
@@ -27,15 +34,11 @@ const pool = databaseUrl ? new Pool({
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  if (!pool) {
-    return res.status(503).json({ 
-      status: 'Error', 
-      message: 'DATABASE_URL not configured',
-      timestamp: new Date().toISOString() 
-    });
-  }
-  
-  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.status(200).json({ 
+    status: 'OK', 
+    databaseConfigured: !!pool,
+    timestamp: new Date().toISOString() 
+  });
 });
 
 // API endpoint to check database connection
@@ -606,6 +609,65 @@ app.post('/api/initialize-db', async (req, res) => {
   }
 });
 
+// Create an endpoint to validate database tables
+app.get('/api/validate-db', async (req, res) => {
+  if (!pool) {
+    return res.status(503).json({ 
+      success: false, 
+      message: 'Database not configured',
+      tables: []
+    });
+  }
+  
+  try {
+    const tablesResult = await pool.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      ORDER BY table_name
+    `);
+    
+    const tables = tablesResult.rows.map(row => row.table_name);
+    
+    // Check if we have our essential tables
+    const requiredTables = [
+      'users', 'products', 'customers', 'orders', 'order_items', 
+      'stock_history', 'company_settings'
+    ];
+    
+    const missingTables = requiredTables.filter(table => !tables.includes(table));
+    
+    if (missingTables.length > 0) {
+      return res.status(200).json({
+        success: false,
+        message: `Missing required tables: ${missingTables.join(', ')}`,
+        tables,
+        missingTables
+      });
+    }
+    
+    // Check for counts in each table
+    const counts = {};
+    for (const table of tables) {
+      const countResult = await pool.query(`SELECT COUNT(*) FROM ${table}`);
+      counts[table] = parseInt(countResult.rows[0].count);
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Database schema validated',
+      tables,
+      counts
+    });
+  } catch (error) {
+    console.error('Database validation error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Handle all other routes by serving the index.html file
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
@@ -625,6 +687,6 @@ app.listen(PORT, () => {
     console.warn('WARNING: DATABASE_URL is not set, database features will not work');
     console.warn('Set DATABASE_URL in your environment to connect to PostgreSQL');
   } else {
-    console.log('Using PostgreSQL database');
+    console.log('Using PostgreSQL database with connection URL:', databaseUrl.split('@')[1] || 'hidden');
   }
 });
