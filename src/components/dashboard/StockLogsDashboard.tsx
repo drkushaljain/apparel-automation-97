@@ -1,47 +1,23 @@
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppContext } from "@/contexts/AppContext";
 import { Badge } from "@/components/ui/badge";
 import { Package, AlertCircle, RefreshCcw } from "lucide-react";
-import * as dbService from '@/services/dbService';
 
 const StockLogsDashboard = () => {
   const { state, formatDate } = useAppContext();
-  const [stockLogs, setStockLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   
-  useEffect(() => {
-    const fetchStockHistory = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        // Get stock history from the database
-        const history = await dbService.getStockHistory();
-        
-        if (!history || history.length === 0) {
-          console.log("No stock history found");
-        } else {
-          console.log(`Found ${history.length} stock history records`);
-        }
-        
-        // Take only the latest 10 entries, sorted by timestamp
-        const recentHistory = [...history]
-          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-          .slice(0, 10);
-        
-        setStockLogs(recentHistory);
-      } catch (error) {
-        console.error("Failed to fetch stock history:", error);
-        setError("Failed to load stock history. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchStockHistory();
-  }, []);
+  // Use the stock history directly from the app context
+  const stockLogs = state.stockHistory
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, 10);
+  
+  // Set loading to false after initial render
+  useState(() => {
+    setLoading(false);
+  });
   
   const getActionColor = (change: number) => {
     return change > 0 ? 'text-green-600' : 'text-red-600';
@@ -60,11 +36,6 @@ const StockLogsDashboard = () => {
           <div className="flex flex-col items-center justify-center py-10">
             <RefreshCcw className="h-8 w-8 animate-spin mb-2 text-primary/70" />
             <p className="text-muted-foreground">Loading stock changes...</p>
-          </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-            <AlertCircle className="h-10 w-10 mb-2 text-red-500/70" />
-            <p>{error}</p>
           </div>
         ) : stockLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
