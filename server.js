@@ -400,6 +400,7 @@ app.get('/api/customers', async (req, res) => {
       city: row.city || '',
       state: row.state || '',
       pincode: row.pincode || '',
+      category: row.category_id ? row.category_id.toString() : undefined,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       orders: row.order_ids.filter(id => id !== null).map(id => id.toString())
@@ -461,6 +462,8 @@ app.put('/api/customers/:id', async (req, res) => {
         error: 'Name and phone are required fields' 
       });
     }
+    
+    console.log(`Updating customer with ID: ${id}, category: ${category}`);
     
     const result = await pool.query(`
       UPDATE customers
