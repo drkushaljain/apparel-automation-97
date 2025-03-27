@@ -36,11 +36,9 @@ app.use(express.static(path.join(__dirname, 'dist')));
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
-// Import and use the API router when running in production
-if (process.env.NODE_ENV === 'production') {
-  const apiRouter = require('./dist/server/router').default;
-  app.use('/api', apiRouter);
-}
+// Import and use the API router
+const apiRouter = require('./src/server/router');
+app.use('/api', apiRouter);
 
 // Fallback route for SPA
 app.get('*', (req, res) => {
