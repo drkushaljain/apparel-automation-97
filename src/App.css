@@ -145,7 +145,7 @@
 }
 
 .page-header {
-  @apply mb-6;
+  @apply mb-4;
 }
 
 .page-title {
@@ -153,11 +153,24 @@
 }
 
 .section-container {
-  @apply mb-6;
+  @apply mb-4;
 }
 
 .section-title {
   @apply text-lg font-medium mb-3;
+}
+
+/* Tabs customization for better responsiveness */
+.tabs-container {
+  @apply w-full overflow-x-auto;
+}
+
+.tabs-scrollable {
+  @apply flex whitespace-nowrap pb-2 -mx-2 px-2;
+}
+
+.tab-item {
+  @apply flex-shrink-0 px-3 py-2 text-sm rounded-md transition-colors;
 }
 
 /* Mobile-specific styles */
@@ -174,6 +187,11 @@
   .mobile-bottom-nav {
     @apply fixed bottom-0 left-0 right-0 bg-background border-t flex justify-around items-center h-14 px-2;
     box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Better touch targets for mobile */
+  .tab-item {
+    @apply min-w-[100px] text-center;
   }
 
   /* Mobile forms enhancement */

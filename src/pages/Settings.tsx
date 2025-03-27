@@ -31,7 +31,6 @@ const Settings = () => {
     "Hello {{customerName}}, your order #{{orderId}} has been {{status}}. {{trackingInfo}}"
   );
   
-  // Bulk message states
   const [bulkMessageType, setBulkMessageType] = useState<"all" | "category" | "product">("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedProduct, setSelectedProduct] = useState<string>("");
@@ -66,15 +65,12 @@ const Settings = () => {
     navigate("/login");
   };
 
-  // Get unique categories
   const categories = [...new Set(products.map(product => product.category))];
 
-  // Filter customers based on selection
   const getEligibleCustomers = () => {
     if (bulkMessageType === "all") {
       return customers;
     } else if (bulkMessageType === "category" && selectedCategory) {
-      // Find customers who purchased products from this category
       const orderIdsWithCategory = state.orders
         .filter(order => 
           order.items.some(item => 
@@ -89,7 +85,6 @@ const Settings = () => {
         )
       );
     } else if (bulkMessageType === "product" && selectedProduct) {
-      // Find customers who purchased this specific product
       const orderIdsWithProduct = state.orders
         .filter(order => 
           order.items.some(item => item.productId === selectedProduct)
@@ -115,13 +110,11 @@ const Settings = () => {
     
     setIsSending(true);
     
-    // Simulate sending messages to all eligible customers
     setTimeout(() => {
       setIsSending(false);
       toast.success(`Bulk message sent to ${eligibleCustomers.length} customers`);
     }, 2000);
     
-    // In a real implementation, you would send messages to each customer here
     console.log(`Sending message to ${eligibleCustomers.length} customers`);
     console.log("Message:", bulkMessageText);
     console.log("Customers:", eligibleCustomers);
@@ -133,41 +126,42 @@ const Settings = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+      <div className="page-container space-y-4 animate-fade-in">
+        <div className="page-header flex justify-between items-center">
+          <h1 className="page-title">Settings</h1>
         </div>
 
-        <Tabs defaultValue="business" className="space-y-6">
-          <TabsList className="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-5 gap-2">
-            <TabsTrigger value="business">
-              <User className="h-4 w-4 mr-2" />
-              Business
-            </TabsTrigger>
-            <TabsTrigger value="templates">
-              <UserCog className="h-4 w-4 mr-2" />
-              Message Templates
-            </TabsTrigger>
-            <TabsTrigger value="bulkMessage">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Bulk Messaging
-            </TabsTrigger>
-            <TabsTrigger value="account">
-              <UserCog className="h-4 w-4 mr-2" />
-              Account
-            </TabsTrigger>
-          </TabsList>
+        <Tabs defaultValue="business" className="w-full">
+          <div className="overflow-x-auto pb-2 -mx-2 px-2">
+            <TabsList className="flex w-full mb-4">
+              <TabsTrigger value="business" className="flex-1 min-w-[100px]">
+                <User className="h-4 w-4 mr-2" />
+                <span className="truncate">Business</span>
+              </TabsTrigger>
+              <TabsTrigger value="templates" className="flex-1 min-w-[140px]">
+                <MessageSquare className="h-4 w-4 mr-2" />
+                <span className="truncate">Message Templates</span>
+              </TabsTrigger>
+              <TabsTrigger value="bulkMessage" className="flex-1 min-w-[120px]">
+                <Users className="h-4 w-4 mr-2" />
+                <span className="truncate">Bulk Messaging</span>
+              </TabsTrigger>
+              <TabsTrigger value="account" className="flex-1 min-w-[100px]">
+                <UserCog className="h-4 w-4 mr-2" />
+                <span className="truncate">Account</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-          {/* Business Information */}
-          <TabsContent value="business" className="space-y-6">
+          <TabsContent value="business" className="mt-2">
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle>Business Information</CardTitle>
                 <CardDescription>
                   Update your business details that will appear on invoices and delivery slips
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4 max-h-[70vh] overflow-y-auto">
+              <CardContent className="space-y-4 max-h-[70vh] overflow-y-auto pt-0">
                 <Button 
                   onClick={handleGoToCompanySettings}
                   variant="outline"
@@ -268,16 +262,15 @@ const Settings = () => {
             </Card>
           </TabsContent>
 
-          {/* Message Templates */}
-          <TabsContent value="templates" className="space-y-6">
+          <TabsContent value="templates" className="mt-2">
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle>WhatsApp Message Templates</CardTitle>
                 <CardDescription>
                   Customize the messages that are sent to customers via WhatsApp
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4 max-h-[70vh] overflow-y-auto">
+              <CardContent className="space-y-4 max-h-[70vh] overflow-y-auto pt-0">
                 <div className="space-y-2">
                   <Label htmlFor="whatsapp-template">Order Status Update Template</Label>
                   <Textarea
@@ -297,16 +290,15 @@ const Settings = () => {
             </Card>
           </TabsContent>
 
-          {/* Bulk Messaging */}
-          <TabsContent value="bulkMessage" className="space-y-6">
+          <TabsContent value="bulkMessage" className="mt-2">
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle>Bulk WhatsApp Marketing</CardTitle>
                 <CardDescription>
                   Send marketing messages to multiple customers based on products or categories
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4 max-h-[70vh] overflow-y-auto">
+              <CardContent className="space-y-4 max-h-[70vh] overflow-y-auto pt-0">
                 <div className="space-y-2">
                   <Label htmlFor="bulk-message-type">Message Recipients</Label>
                   <Select 
@@ -399,16 +391,15 @@ const Settings = () => {
             </Card>
           </TabsContent>
 
-          {/* Account Settings */}
-          <TabsContent value="account" className="space-y-6">
+          <TabsContent value="account" className="mt-2">
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle>Account Information</CardTitle>
                 <CardDescription>
                   View and manage your account details
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4 max-h-[70vh] overflow-y-auto">
+              <CardContent className="space-y-4 max-h-[70vh] overflow-y-auto pt-0">
                 {currentUser && (
                   <div className="space-y-4">
                     <div className="space-y-2">
