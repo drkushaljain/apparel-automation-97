@@ -22,8 +22,8 @@ import NewUser from "@/pages/NewUser";
 import EditUser from "@/pages/EditUser";
 import CompanySettings from "@/pages/CompanySettings";
 import CustomerCategories from "@/pages/CustomerCategories";
-import EditCustomer from "@/pages/EditCustomer";
 import Index from "@/pages/Index";
+import RevenueReport from "@/pages/RevenueReport";
 
 function App() {
   return (
@@ -48,6 +48,7 @@ function App() {
       <Route path="/settings" element={<MainLayout><Settings /></MainLayout>} />
       <Route path="/company-settings" element={<MainLayout><CompanySettings /></MainLayout>} />
       <Route path="/customer-categories" element={<MainLayout><CustomerCategories /></MainLayout>} />
+      <Route path="/reports/revenue" element={<MainLayout><RevenueReport /></MainLayout>} />
     </Routes>
   );
 }
