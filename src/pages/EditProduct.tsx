@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
@@ -38,8 +39,11 @@ const EditProduct = () => {
         setName(product.name);
         setDescription(product.description || "");
         setPrice(ensureCurrencyPrecision(product.price));
-        setImageUrl(product.imageUrl || "");
+        
         if (product.imageUrl) {
+          // If it's a data URL or an uploaded file path
+          setImageUrl(product.imageUrl);
+          
           if (product.imageUrl.startsWith('data:')) {
             setActiveTab("upload");
             setImagePreview(product.imageUrl);
@@ -47,6 +51,7 @@ const EditProduct = () => {
             setActiveTab("url");
           }
         }
+        
         setCategory(product.category || "");
         setStock(product.stock);
         setSku(product.sku || "");
