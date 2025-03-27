@@ -48,6 +48,7 @@ function App() {
       <Route path="/users/new" element={<MainLayout><NewUser /></MainLayout>} />
       <Route path="/users/:id/edit" element={<MainLayout><EditUser /></MainLayout>} />
       <Route path="/settings" element={<MainLayout><Settings /></MainLayout>} />
+      <Route path="/settings/company" element={<MainLayout><CompanySettings /></MainLayout>} />
       <Route path="/company-settings" element={<MainLayout><CompanySettings /></MainLayout>} />
       <Route path="/customer-categories" element={<MainLayout><CustomerCategories /></MainLayout>} />
       <Route path="/reports/revenue" element={<MainLayout><RevenueReport /></MainLayout>} />
