@@ -46,7 +46,7 @@ const EditCustomer = () => {
         setCity(foundCustomer.city);
         setStateValue(foundCustomer.state);
         setPincode(foundCustomer.pincode);
-        setCategory(foundCustomer.category || "");
+        setCategory(foundCustomer.category || "no_category");
       }
     }
 
@@ -84,7 +84,7 @@ const EditCustomer = () => {
       city,
       state: stateValue,
       pincode,
-      category: category || undefined,
+      category: category === "no_category" ? undefined : category,
     };
     
     updateCustomer(updatedCustomer);
@@ -215,7 +215,7 @@ const EditCustomer = () => {
                       <SelectValue placeholder="Select Category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Category</SelectItem>
+                      <SelectItem value="no_category">No Category</SelectItem>
                       {categories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id}>
                           {cat.name}
