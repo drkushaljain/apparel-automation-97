@@ -32,3 +32,24 @@ export function ensureCurrencyPrecision(amount: number): number {
   // Convert to string with 2 decimals, then back to number to avoid floating point issues
   return parseFloat(amount.toFixed(2));
 }
+
+/**
+ * Returns appropriate responsive class based on screen size
+ * Useful for conditional responsive styling
+ */
+export function getResponsiveClass(base: string, md?: string, lg?: string): string {
+  return cn(
+    base,
+    md && `md:${md}`,
+    lg && `lg:${lg}`
+  );
+}
+
+/**
+ * Truncates text to a specific length and adds ellipsis
+ */
+export function truncateText(text: string, maxLength: number = 20): string {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return `${text.substring(0, maxLength)}...`;
+}

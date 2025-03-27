@@ -15,11 +15,13 @@ import {
   MessageSquare,
   FileText,
   UserCog,
+  ChevronLeft,
 } from "lucide-react";
 import { useAppContext } from "@/contexts/AppContext";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { UserRole } from "@/types";
+import { toast } from "sonner";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -117,18 +119,34 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     setSidebarOpen(!sidebarOpen);
   };
 
+  const handleBackNavigation = () => {
+    navigate(-1);
+  };
+
   return (
     <div className="flex h-full">
-      {/* Mobile sidebar toggle */}
-      <div className="fixed top-4 left-4 z-40 md:hidden">
+      {/* Mobile sidebar toggle and back button */}
+      <div className="fixed top-4 left-4 z-40 flex gap-2 md:hidden">
         <Button
           variant="outline"
           size="icon"
           onClick={toggleSidebar}
           className="rounded-full shadow-md"
+          aria-label="Toggle Menu"
         >
           {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </Button>
+        {location.pathname !== "/" && location.pathname !== "/dashboard" && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleBackNavigation}
+            className="rounded-full shadow-md"
+            aria-label="Go Back"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       {/* Sidebar backdrop for mobile */}
@@ -142,20 +160,20 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-30 w-64 bg-card border-r shadow-md transform transition-transform duration-200 ease-in-out",
+          "fixed inset-y-0 left-0 z-30 w-64 bg-card border-r shadow-md transform transition-transform duration-200 ease-in-out overflow-hidden",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
-          "md:translate-x-0 md:static"
+          "md:translate-x-0 md:static md:h-screen"
         )}
       >
         <div className="flex flex-col h-full">
           <div className="flex items-center h-16 px-6 border-b">
-            <h1 className="text-xl font-bold">Apparel Management</h1>
+            <h1 className="text-xl font-bold truncate">Apparel Management</h1>
           </div>
 
           {/* User info */}
           {currentUser && (
             <div className="flex items-center px-6 py-4 border-b">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mr-3 flex-shrink-0">
                 <User className="h-5 w-5" />
               </div>
               <div className="flex-1 min-w-0">
@@ -184,8 +202,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                     if (isMobile) setSidebarOpen(false);
                   }}
                 >
-                  <item.icon className="mr-3 h-4 w-4" />
-                  {item.name}
+                  <item.icon className="mr-3 h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">{item.name}</span>
                 </Button>
               ))}
           </nav>
@@ -195,10 +213,13 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             <Button
               variant="outline"
               className="w-full justify-start text-sm"
-              onClick={() => navigate("/login")}
+              onClick={() => {
+                toast.success("Logged out successfully");
+                navigate("/login");
+              }}
             >
-              <LogOut className="mr-3 h-4 w-4" />
-              Logout
+              <LogOut className="mr-3 h-4 w-4 flex-shrink-0" />
+              <span>Logout</span>
             </Button>
           </div>
         </div>
@@ -206,10 +227,10 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen w-full">
-        <main className="flex-1 p-4 md:p-6 overflow-y-auto animate-fade-in">
+        <main className="flex-1 p-4 md:p-6 overflow-y-auto animate-fade-in pt-16 md:pt-4">
           {children}
         </main>
-        <footer className="p-4 border-t text-center text-sm text-muted-foreground">
+        <footer className="p-4 border-t text-center text-xs text-muted-foreground">
           <p>© {new Date().getFullYear()} Apparel Management System</p>
         </footer>
       </div>

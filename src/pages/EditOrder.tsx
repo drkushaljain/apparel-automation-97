@@ -6,6 +6,7 @@ import OrderForm from "@/components/OrderForm";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Order } from "@/types";
+import { toast } from "sonner";
 
 const EditOrder = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +27,7 @@ const EditOrder = () => {
     };
     
     updateOrder(updatedOrder);
+    toast.success("Order updated successfully");
     navigate(`/orders/${order.id}`);
   };
 
@@ -51,12 +53,12 @@ const EditOrder = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate(`/orders/${id}`)}>
+      <div className="space-y-6 animate-fade-in max-w-full">
+        <div className="flex items-center gap-2 sticky top-0 bg-background z-10 pb-2">
+          <Button variant="ghost" size="icon" onClick={() => navigate(`/orders/${id}`)} className="md:flex hidden">
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-bold tracking-tight">Edit Order {order.id}</h1>
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight">Edit Order {order.id}</h1>
         </div>
         
         <OrderForm

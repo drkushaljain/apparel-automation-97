@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import MainLayout from "@/components/layout/MainLayout";
@@ -8,11 +9,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { OrderStatus } from "@/types";
-import { Search, Plus, FileDown, Printer } from "lucide-react";
+import { Search, Plus, FileDown, Printer, MoreHorizontal, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import NoContent from "@/components/NoContent";
 import { ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 const Orders = () => {
   const { state } = useAppContext();
@@ -77,6 +87,8 @@ const Orders = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    toast.success("Orders exported to CSV");
   };
   
   // Print bill function
@@ -102,9 +114,10 @@ const Orders = () => {
         <html>
           <head>
             <title>Invoice - Order #${order.id}</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
               body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-              .invoice-container { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 30px; }
+              .invoice-container { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; }
               .text-center { text-align: center; }
               .text-right { text-align: right; }
               .border-b { border-bottom: 1px solid #ddd; padding-bottom: 15px; margin-bottom: 15px; }
@@ -134,6 +147,12 @@ const Orders = () => {
                 body { margin: 0; padding: 0; }
                 .invoice-container { border: none; max-width: 100%; padding: 10px; }
                 .no-print { display: none; }
+              }
+              @media (max-width: 600px) {
+                .grid { grid-template-columns: 1fr; }
+                .invoice-header { flex-direction: column; }
+                table { font-size: 0.8rem; }
+                .invoice-container { padding: 10px; }
               }
             </style>
           </head>
@@ -264,19 +283,21 @@ const Orders = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
+      <div className="space-y-4 md:space-y-6 animate-fade-in">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight">Orders</h1>
           <div className="flex gap-2">
             <Button 
               variant="outline" 
               size="icon"
               onClick={exportToCSV}
               disabled={filteredOrders.length === 0}
+              className="hidden md:flex"
+              title="Export to CSV"
             >
               <FileDown className="h-4 w-4" />
             </Button>
-            <Button onClick={() => navigate("/orders/new")}>
+            <Button onClick={() => navigate("/orders/new")} className="w-full md:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               New Order
             </Button>
@@ -337,52 +358,144 @@ const Orders = () => {
                 icon={<ShoppingBag className="h-12 w-12 text-primary/20" />}
               />
             ) : (
-              <div className="rounded-md border overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Order ID</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredOrders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-medium">{order.id}</TableCell>
-                        <TableCell>{order.customer.name}</TableCell>
-                        <TableCell>
-                          <StatusBadge status={order.status} />
-                        </TableCell>
-                        <TableCell className="text-right">₹{order.totalAmount}</TableCell>
-                        <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => printBill(order.id)}
-                              title="Print Bill"
-                            >
-                              <Printer className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigate(`/orders/${order.id}`)}
-                            >
-                              View
-                            </Button>
-                          </div>
-                        </TableCell>
+              <>
+                {/* Desktop Table View */}
+                <div className="rounded-md border overflow-x-auto hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Order ID</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredOrders.map((order) => (
+                        <TableRow key={order.id} className="cursor-pointer hover:bg-muted/30" onClick={() => navigate(`/orders/${order.id}`)}>
+                          <TableCell className="font-medium">{order.id}</TableCell>
+                          <TableCell>{order.customer.name}</TableCell>
+                          <TableCell>
+                            <StatusBadge status={order.status} />
+                          </TableCell>
+                          <TableCell className="text-right">₹{order.totalAmount.toFixed(2)}</TableCell>
+                          <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  printBill(order.id);
+                                }}
+                                title="Print Bill"
+                              >
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/orders/${order.id}`);
+                                }}
+                              >
+                                View
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                
+                {/* Mobile Card View */}
+                <div className="block md:hidden space-y-3">
+                  {filteredOrders.map((order) => (
+                    <Card key={order.id} className="hover:bg-muted/10 transition-colors cursor-pointer" onClick={() => navigate(`/orders/${order.id}`)}>
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p className="font-medium text-sm">{order.id}</p>
+                            <p className="text-muted-foreground text-xs">{new Date(order.createdAt).toLocaleDateString()}</p>
+                          </div>
+                          <StatusBadge status={order.status} />
+                        </div>
+                        
+                        <div className="flex justify-between items-center mb-2">
+                          <p className="text-sm truncate max-w-[180px]">{order.customer.name}</p>
+                          <p className="font-semibold text-sm">₹{order.totalAmount.toFixed(2)}</p>
+                        </div>
+                        
+                        <div className="flex justify-between items-center mt-3 pt-2 border-t" onClick={(e) => e.stopPropagation()}>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 text-xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/orders/${order.id}`);
+                            }}
+                          >
+                            <Eye className="h-3.5 w-3.5 mr-1" />
+                            View
+                          </Button>
+                          
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel className="text-xs">Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                className="text-xs cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  printBill(order.id);
+                                }}
+                              >
+                                <Printer className="h-3.5 w-3.5 mr-2" />
+                                Print Invoice
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-xs cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/orders/edit/${order.id}`);
+                                }}
+                              >
+                                <Edit className="h-3.5 w-3.5 mr-2" />
+                                Edit Order
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  
+                  {/* Mobile Export Button */}
+                  <div className="fixed bottom-4 right-4 z-10 md:hidden">
+                    <Button 
+                      variant="secondary" 
+                      size="sm" 
+                      className="rounded-full shadow-lg"
+                      onClick={exportToCSV}
+                      disabled={filteredOrders.length === 0}
+                    >
+                      <FileDown className="h-4 w-4 mr-2" />
+                      Export
+                    </Button>
+                  </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
