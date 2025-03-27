@@ -128,7 +128,7 @@ const ProductDetail = () => {
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center">
           <Button variant="ghost" size="icon" onClick={() => navigate("/products")}>
@@ -391,7 +391,7 @@ const ProductDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </MainLayout>
+    </>
   );
 };
 

@@ -181,7 +181,7 @@ const EditUser = () => {
   // Can't edit your own user
   if (id === currentUser.id) {
     return (
-      <MainLayout>
+      <>
         <div className="h-full flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-lg font-medium">Action Not Allowed</h2>
@@ -191,13 +191,13 @@ const EditUser = () => {
             </Button>
           </div>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   if (!user) {
     return (
-      <MainLayout>
+      <>
         <div className="h-full flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-lg font-medium">User not found</h2>
@@ -207,12 +207,12 @@ const EditUser = () => {
             </Button>
           </div>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={() => navigate("/users")}>
@@ -376,7 +376,7 @@ const EditUser = () => {
           </CardContent>
         </Card>
       </div>
-    </MainLayout>
+    </>
   );
 };
 

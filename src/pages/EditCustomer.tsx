@@ -109,7 +109,7 @@ const EditCustomer = () => {
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={() => navigate(`/customers/${id}`)}>
@@ -243,7 +243,7 @@ const EditCustomer = () => {
           </CardContent>
         </Card>
       </div>
-    </MainLayout>
+    </>
   );
 };
 
