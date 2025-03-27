@@ -1,94 +1,57 @@
-
-import { Routes, Route } from "react-router-dom";
-import { Toaster } from "sonner";
-import { ThemeProvider } from "@/components/theme-provider";
-import Login from "@/pages/Login";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+} from "react-router-dom";
+import { AppProvider } from "@/contexts/AppContext";
+import MainLayout from "@/components/layout/MainLayout";
 import Dashboard from "@/pages/Dashboard";
 import Products from "@/pages/Products";
+import Customers from "@/pages/Customers";
+import Orders from "@/pages/Orders";
+import Settings from "@/pages/Settings";
+import Login from "@/pages/Login";
 import NewProduct from "@/pages/NewProduct";
 import ProductDetail from "@/pages/ProductDetail";
 import EditProduct from "@/pages/EditProduct";
-import Customers from "@/pages/Customers";
-import CustomerCategories from "@/pages/CustomerCategories";
 import NewCustomer from "@/pages/NewCustomer";
 import CustomerDetail from "@/pages/CustomerDetail";
-import Orders from "@/pages/Orders";
 import NewOrder from "@/pages/NewOrder";
 import OrderDetail from "@/pages/OrderDetail";
-import EditOrder from "@/pages/EditOrder";
-import RevenueReport from "@/pages/RevenueReport";
-import UserManagement from "@/pages/UserManagement";
-import MarketingCampaigns from "@/pages/MarketingCampaigns";
-import Settings from "@/pages/Settings";
+import Users from "@/pages/Users";
+import NewUser from "@/pages/NewUser";
+import EditUser from "@/pages/EditUser";
 import CompanySettings from "@/pages/CompanySettings";
-import NotFound from "@/pages/NotFound";
-import MainLayout from "@/components/layout/MainLayout";
-import { useAppContext } from "@/contexts/AppContext";
-import { Navigate } from "react-router-dom";
-import "./App.css";
-import "./components/styles/scroll.css";
-
-// Auth guard component to protect routes
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { state } = useAppContext();
-  const { currentUser, isLoading } = state;
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!currentUser) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
-};
+import CustomerCategories from "@/pages/CustomerCategories";
+import EditCustomer from "@/pages/EditCustomer";
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="light" storageKey="apparel-theme">
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        
-        {/* Protected routes with MainLayout */}
-        <Route 
-          path="/*" 
-          element={
-            <ProtectedRoute>
-              <MainLayout>
-                <Routes>
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/products" element={<Products />} />
-                  <Route path="/products/new" element={<NewProduct />} />
-                  <Route path="/products/:id" element={<ProductDetail />} />
-                  <Route path="/products/:id/edit" element={<EditProduct />} />
-                  <Route path="/customers" element={<Customers />} />
-                  <Route path="/customer-categories" element={<CustomerCategories />} />
-                  <Route path="/customers/new" element={<NewCustomer />} />
-                  <Route path="/customers/:id" element={<CustomerDetail />} />
-                  <Route path="/orders" element={<Orders />} />
-                  <Route path="/orders/new" element={<NewOrder />} />
-                  <Route path="/orders/:id" element={<OrderDetail />} />
-                  <Route path="/orders/:id/edit" element={<EditOrder />} />
-                  <Route path="/reports/revenue" element={<RevenueReport />} />
-                  <Route path="/users" element={<UserManagement />} />
-                  <Route path="/marketing" element={<MarketingCampaigns />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/settings/company" element={<CompanySettings />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </MainLayout>
-            </ProtectedRoute>
-          } 
-        />
-      </Routes>
-      <Toaster position="top-right" closeButton />
-    </ThemeProvider>
+    <AppProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<MainLayout><Dashboard /></MainLayout>} />
+          <Route path="/products" element={<MainLayout><Products /></MainLayout>} />
+          <Route path="/products/new" element={<MainLayout><NewProduct /></MainLayout>} />
+          <Route path="/products/:id" element={<MainLayout><ProductDetail /></MainLayout>} />
+          <Route path="/products/:id/edit" element={<MainLayout><EditProduct /></MainLayout>} />
+          <Route path="/customers" element={<MainLayout><Customers /></MainLayout>} />
+          <Route path="/customers/new" element={<MainLayout><NewCustomer /></MainLayout>} />
+          <Route path="/customers/:id" element={<MainLayout><CustomerDetail /></MainLayout>} />
+          <Route path="/customers/:id/edit" element={<MainLayout><EditCustomer /></MainLayout>} />
+          <Route path="/orders" element={<MainLayout><Orders /></MainLayout>} />
+          <Route path="/orders/new" element={<MainLayout><NewOrder /></MainLayout>} />
+          <Route path="/orders/:id" element={<MainLayout><OrderDetail /></MainLayout>} />
+          <Route path="/users" element={<MainLayout><Users /></MainLayout>} />
+          <Route path="/users/new" element={<MainLayout><NewUser /></MainLayout>} />
+          <Route path="/users/:id/edit" element={<MainLayout><EditUser /></MainLayout>} />
+          <Route path="/settings" element={<MainLayout><Settings /></MainLayout>} />
+          <Route path="/company-settings" element={<MainLayout><CompanySettings /></MainLayout>} />
+          <Route path="/customer-categories" element={<MainLayout><CustomerCategories /></MainLayout>} />
+        </Routes>
+      </Router>
+    </AppProvider>
   );
 }
 

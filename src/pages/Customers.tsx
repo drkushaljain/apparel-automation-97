@@ -6,23 +6,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, FileDown, Filter, Tag } from "lucide-react";
+import { Search, Plus, FileDown, Filter, Tag, Edit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import NoContent from "@/components/NoContent";
 import { Users } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { CustomerCategory } from "@/types";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
 
 const Customers = () => {
   const { state } = useAppContext();
-  const { customers, orders, isLoading } = state;
+  const { customers, orders, isLoading, currentUser } = state;
   const navigate = useNavigate();
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [categories, setCategories] = useState<CustomerCategory[]>([]);
+
+  // Check if user has permission to edit customers
+  const canEditCustomer = currentUser?.permissions.canManageCustomers;
 
   // Load categories
   useEffect(() => {
@@ -52,7 +57,7 @@ const Customers = () => {
   const filteredCustomers = useMemo(() => {
     return customers.filter(customer => {
       // First filter by category if selected
-      if (selectedCategory && customer.category !== selectedCategory) {
+      if (selectedCategory && selectedCategory !== "all" && customer.category !== selectedCategory) {
         return false;
       }
       
@@ -251,13 +256,32 @@ const Customers = () => {
                         <TableCell className="text-right">{customer.orders.length}</TableCell>
                         <TableCell className="text-right">₹{(customersPurchaseValues[customer.id] || 0).toLocaleString()}</TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/customers/${customer.id}`)}
-                          >
-                            View
-                          </Button>
+                          {canEditCustomer ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => navigate(`/customers/${customer.id}`)}>
+                                  View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => navigate(`/customers/${customer.id}/edit`)}>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit Customer
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/customers/${customer.id}`)}
+                            >
+                              View
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

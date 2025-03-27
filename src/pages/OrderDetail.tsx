@@ -27,6 +27,7 @@ const OrderDetail = () => {
   const [trackingId, setTrackingId] = useState<string>(order?.trackingId || "");
   const [trackingUrl, setTrackingUrl] = useState<string>(order?.trackingUrl || "");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showDeliverySlip, setShowDeliverySlip] = useState(false);
 
   if (!order) {
     return (
@@ -293,7 +294,10 @@ const OrderDetail = () => {
               
               {/* Shipping Tab */}
               <TabsContent value="shipping">
-                <DeliverySlip order={order} />
+                <DeliverySlip 
+                  order={order} 
+                  onClose={() => setShowDeliverySlip(false)} 
+                />
               </TabsContent>
               
               {/* Notify Tab */}

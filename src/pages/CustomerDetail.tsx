@@ -6,7 +6,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, ExternalLink, Mail, MapPin, Phone, Tag } from "lucide-react";
+import { ArrowLeft, ExternalLink, Mail, MapPin, Phone, Tag, Edit } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import { CustomerCategory } from "@/types";
 
@@ -14,7 +14,7 @@ const CustomerDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { state } = useAppContext();
-  const { customers, orders } = state;
+  const { customers, orders, currentUser } = state;
   const [category, setCategory] = useState<CustomerCategory | null>(null);
 
   // Find the customer
@@ -25,6 +25,9 @@ const CustomerDetail = () => {
   
   // Calculate total purchase value
   const totalPurchaseValue = customerOrders.reduce((sum, order) => sum + order.totalAmount, 0);
+
+  // Check if user has permission to edit customers
+  const canEditCustomer = currentUser?.permissions.canManageCustomers;
 
   useEffect(() => {
     if (customer?.category) {
@@ -55,11 +58,20 @@ const CustomerDetail = () => {
   return (
     <MainLayout>
       <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/customers")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-2xl font-bold tracking-tight">{customer.name}</h1>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/customers")}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-2xl font-bold tracking-tight">{customer.name}</h1>
+          </div>
+          
+          {canEditCustomer && (
+            <Button onClick={() => navigate(`/customers/${id}/edit`)}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Customer
+            </Button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
