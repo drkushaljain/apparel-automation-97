@@ -70,7 +70,7 @@ const StockLogsDashboard = () => {
                     <p className="text-sm text-muted-foreground">
                       {formatDate(log.timestamp)}
                     </p>
-                    <p className="text-xs">By {log.userName || log.updatedBy || 'System'}</p>
+                    <p className="text-xs">By {log.userName || 'System'}</p>
                   </div>
                 </div>
               </div>
