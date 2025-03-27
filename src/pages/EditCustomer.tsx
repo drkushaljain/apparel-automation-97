@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
@@ -12,6 +11,8 @@ import { ArrowLeft, Save } from "lucide-react";
 import { CustomerCategory, Customer } from "@/types";
 import { toast } from "sonner";
 
+const API_BASE_URL = '/api/customer-categories';
+
 const EditCustomer = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ const EditCustomer = () => {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [categories, setCategories] = useState<CustomerCategory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingCategories, setIsFetchingCategories] = useState(true);
 
   // Form state
   const [name, setName] = useState("");
@@ -50,12 +52,29 @@ const EditCustomer = () => {
       }
     }
 
-    // Load categories
-    const savedCategories = localStorage.getItem("customer_categories");
-    if (savedCategories) {
-      setCategories(JSON.parse(savedCategories));
-    }
+    // Fetch categories from API
+    fetchCategories();
   }, [id, customers]);
+
+  const fetchCategories = async () => {
+    try {
+      setIsFetchingCategories(true);
+      const response = await fetch(API_BASE_URL);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(data);
+      } else {
+        console.error('Failed to fetch categories:', response.statusText);
+        toast.error("Failed to load customer categories");
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      toast.error("Could not connect to the server");
+    } finally {
+      setIsFetchingCategories(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,9 +229,9 @@ const EditCustomer = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="category">Customer Category</Label>
-                  <Select value={category} onValueChange={setCategory}>
+                  <Select value={category} onValueChange={setCategory} disabled={isFetchingCategories}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select Category" />
+                      <SelectValue placeholder={isFetchingCategories ? "Loading categories..." : "Select Category"} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="no_category">No Category</SelectItem>

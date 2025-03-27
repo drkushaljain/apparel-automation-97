@@ -1,4 +1,3 @@
-
 const { Pool } = require('pg');
 const { ensureUploadDirectories, handleImageUpload } = require('./fileUpload');
 
@@ -11,13 +10,75 @@ const pool = new Pool({
 ensureUploadDirectories();
 
 // Database status check
-const checkDatabaseConnection = async () => {
+exports.checkDatabaseConnection = async () => {
   try {
     const client = await pool.connect();
     client.release();
     return true;
   } catch (error) {
     console.error('Database connection error:', error);
+    return false;
+  }
+};
+
+// CUSTOMER CATEGORIES FUNCTIONS
+exports.getAllCustomerCategories = async () => {
+  const result = await pool.query('SELECT * FROM customer_categories ORDER BY name');
+  return result.rows;
+};
+
+exports.getCustomerCategoryById = async (id) => {
+  const result = await pool.query('SELECT * FROM customer_categories WHERE id = $1', [id]);
+  return result.rows[0] || null;
+};
+
+exports.createCustomerCategory = async (category) => {
+  const result = await pool.query(
+    `INSERT INTO customer_categories (name, description) 
+    VALUES ($1, $2) 
+    RETURNING *`,
+    [
+      category.name,
+      category.description,
+    ]
+  );
+  return result.rows[0];
+};
+
+exports.updateCustomerCategory = async (id, category) => {
+  const result = await pool.query(
+    `UPDATE customer_categories SET 
+      name = $1, 
+      description = $2,
+      updated_at = NOW()
+    WHERE id = $3 
+    RETURNING *`,
+    [
+      category.name,
+      category.description,
+      id
+    ]
+  );
+  return result.rows[0] || null;
+};
+
+exports.deleteCustomerCategory = async (id) => {
+  try {
+    // Check if the category is used by any customers
+    const usageCheckResult = await pool.query('SELECT COUNT(*) FROM customers WHERE category_id = $1', [id]);
+    const usageCount = parseInt(usageCheckResult.rows[0].count, 10);
+
+    if (usageCount > 0) {
+      // Category is in use, prevent deletion
+      console.log(`Category with ID ${id} is used by ${usageCount} customers and cannot be deleted.`);
+      return false;
+    }
+
+    // Not in use, proceed with deletion
+    const result = await pool.query('DELETE FROM customer_categories WHERE id = $1', [id]);
+    return result.rowCount > 0;
+  } catch (error) {
+    console.error('Error deleting category:', error);
     return false;
   }
 };
@@ -478,5 +539,10 @@ module.exports = {
   getStockHistory,
   addStockHistory,
   getActivityLogs,
-  addActivityLog
+  addActivityLog,
+  getAllCustomerCategories,
+  getCustomerCategoryById,
+  createCustomerCategory,
+  updateCustomerCategory,
+  deleteCustomerCategory
 };

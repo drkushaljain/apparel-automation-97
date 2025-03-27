@@ -1,21 +1,41 @@
 
 import { Customer, Order, Product, User, CompanySettings, StockHistoryRecord } from '@/types';
-import { initPostgresConnection, getCustomers as postgresGetCustomers, getOrders as postgresGetOrders, getProducts as postgresGetProducts, getUsers as postgresGetUsers, getCompanySettings as postgresGetCompanySettings, getStockHistory as postgresGetStockHistory } from '@/services/postgresService';
+import { 
+  initPostgresConnection, 
+  getCustomers as postgresGetCustomers, 
+  getOrders as postgresGetOrders, 
+  getProducts as postgresGetProducts,
+  getUsers as postgresGetUsers,
+  getCompanySettings as postgresGetCompanySettings,
+  getStockHistory as postgresGetStockHistory,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  createCustomer,
+  updateCustomer,
+  deleteCustomer,
+  createOrder,
+  updateOrder,
+  deleteOrder,
+  createUser,
+  updateUser,
+  deleteUser,
+  updateCompanySettings,
+  addStockHistory
+} from '@/services/postgresService';
 
 // Initialize the database
 export async function initDatabase(): Promise<boolean> {
   try {
-    // First try to connect to the database
+    // Connect to the database
     const dbConnected = await initPostgresConnection();
     
-    // If successful, return true
     if (dbConnected) {
       console.log("Database connected successfully");
       return true;
     }
     
-    // If database connection failed, log the error and use localStorage
-    console.warn("Database connection failed. Using localStorage instead.");
+    console.error("Database connection failed");
     return false;
   } catch (error) {
     console.error("Error initializing database:", error);
@@ -23,94 +43,209 @@ export async function initDatabase(): Promise<boolean> {
   }
 }
 
-// These functions are required by the AppContext and other components
+// PRODUCTS
 export async function getProducts(): Promise<Product[]> {
   try {
-    const dbConnected = await initPostgresConnection();
-    if (dbConnected) {
-      return await postgresGetProducts();
-    } else {
-      const localProducts = localStorage.getItem('products');
-      return localProducts ? JSON.parse(localProducts) : [];
-    }
+    await initPostgresConnection();
+    return await postgresGetProducts();
   } catch (error) {
     console.error("Error getting products:", error);
     return [];
   }
 }
 
+export async function addProduct(product: Omit<Product, 'id'>): Promise<Product | null> {
+  try {
+    await initPostgresConnection();
+    return await createProduct(product);
+  } catch (error) {
+    console.error("Error adding product:", error);
+    return null;
+  }
+}
+
+export async function modifyProduct(product: Product): Promise<Product | null> {
+  try {
+    await initPostgresConnection();
+    return await updateProduct(product);
+  } catch (error) {
+    console.error("Error updating product:", error);
+    return null;
+  }
+}
+
+export async function removeProduct(id: string): Promise<boolean> {
+  try {
+    await initPostgresConnection();
+    return await deleteProduct(id);
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    return false;
+  }
+}
+
+// CUSTOMERS
 export async function getCustomers(): Promise<Customer[]> {
   try {
-    const dbConnected = await initPostgresConnection();
-    if (dbConnected) {
-      return await postgresGetCustomers();
-    } else {
-      const localCustomers = localStorage.getItem('customers');
-      return localCustomers ? JSON.parse(localCustomers) : [];
-    }
+    await initPostgresConnection();
+    return await postgresGetCustomers();
   } catch (error) {
     console.error("Error getting customers:", error);
     return [];
   }
 }
 
+export async function addCustomer(customer: Omit<Customer, 'id'>): Promise<Customer | null> {
+  try {
+    await initPostgresConnection();
+    return await createCustomer(customer);
+  } catch (error) {
+    console.error("Error adding customer:", error);
+    return null;
+  }
+}
+
+export async function modifyCustomer(customer: Customer): Promise<Customer | null> {
+  try {
+    await initPostgresConnection();
+    return await updateCustomer(customer);
+  } catch (error) {
+    console.error("Error updating customer:", error);
+    return null;
+  }
+}
+
+export async function removeCustomer(id: string): Promise<boolean> {
+  try {
+    await initPostgresConnection();
+    return await deleteCustomer(id);
+  } catch (error) {
+    console.error("Error deleting customer:", error);
+    return false;
+  }
+}
+
+// ORDERS
 export async function getOrders(): Promise<Order[]> {
   try {
-    const dbConnected = await initPostgresConnection();
-    if (dbConnected) {
-      return await postgresGetOrders();
-    } else {
-      const localOrders = localStorage.getItem('orders');
-      return localOrders ? JSON.parse(localOrders) : [];
-    }
+    await initPostgresConnection();
+    return await postgresGetOrders();
   } catch (error) {
     console.error("Error getting orders:", error);
     return [];
   }
 }
 
+export async function addOrder(order: Omit<Order, 'id'>): Promise<Order | null> {
+  try {
+    await initPostgresConnection();
+    return await createOrder(order);
+  } catch (error) {
+    console.error("Error adding order:", error);
+    return null;
+  }
+}
+
+export async function modifyOrder(order: Order): Promise<Order | null> {
+  try {
+    await initPostgresConnection();
+    return await updateOrder(order);
+  } catch (error) {
+    console.error("Error updating order:", error);
+    return null;
+  }
+}
+
+export async function removeOrder(id: string): Promise<boolean> {
+  try {
+    await initPostgresConnection();
+    return await deleteOrder(id);
+  } catch (error) {
+    console.error("Error deleting order:", error);
+    return false;
+  }
+}
+
+// USERS
 export async function getUsers(): Promise<User[]> {
   try {
-    const dbConnected = await initPostgresConnection();
-    if (dbConnected) {
-      return await postgresGetUsers();
-    } else {
-      const localUsers = localStorage.getItem('users');
-      return localUsers ? JSON.parse(localUsers) : [];
-    }
+    await initPostgresConnection();
+    return await postgresGetUsers();
   } catch (error) {
     console.error("Error getting users:", error);
     return [];
   }
 }
 
+export async function addUser(user: Omit<User, 'id'>): Promise<User | null> {
+  try {
+    await initPostgresConnection();
+    return await createUser(user);
+  } catch (error) {
+    console.error("Error adding user:", error);
+    return null;
+  }
+}
+
+export async function modifyUser(user: User): Promise<User | null> {
+  try {
+    await initPostgresConnection();
+    return await updateUser(user);
+  } catch (error) {
+    console.error("Error updating user:", error);
+    return null;
+  }
+}
+
+export async function removeUser(id: string): Promise<boolean> {
+  try {
+    await initPostgresConnection();
+    return await deleteUser(id);
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    return false;
+  }
+}
+
+// COMPANY SETTINGS
 export async function getCompanySettings(): Promise<CompanySettings | null> {
   try {
-    const dbConnected = await initPostgresConnection();
-    if (dbConnected) {
-      return await postgresGetCompanySettings();
-    } else {
-      const localCompanySettings = localStorage.getItem('company_settings');
-      return localCompanySettings ? JSON.parse(localCompanySettings) : null;
-    }
+    await initPostgresConnection();
+    return await postgresGetCompanySettings();
   } catch (error) {
     console.error("Error getting company settings:", error);
     return null;
   }
 }
 
+export async function saveCompanySettings(settings: CompanySettings): Promise<CompanySettings | null> {
+  try {
+    await initPostgresConnection();
+    return await updateCompanySettings(settings);
+  } catch (error) {
+    console.error("Error updating company settings:", error);
+    return null;
+  }
+}
+
+// STOCK HISTORY
 export async function getStockHistory(): Promise<StockHistoryRecord[]> {
   try {
-    const dbConnected = await initPostgresConnection();
-    if (dbConnected) {
-      return await postgresGetStockHistory();
-    } else {
-      const localStockHistory = localStorage.getItem('stock_history');
-      return localStockHistory ? JSON.parse(localStockHistory) : [];
-    }
+    await initPostgresConnection();
+    return await postgresGetStockHistory();
   } catch (error) {
     console.error("Error getting stock history:", error);
     return [];
+  }
+}
+
+export async function addStockRecord(record: Omit<StockHistoryRecord, 'id'>): Promise<StockHistoryRecord | null> {
+  try {
+    await initPostgresConnection();
+    return await addStockHistory(record);
+  } catch (error) {
+    console.error("Error adding stock history record:", error);
+    return null;
   }
 }
 
@@ -123,46 +258,41 @@ export async function loadInitialData(): Promise<{
   companySettings: CompanySettings | null;
   stockHistory: StockHistoryRecord[];
 }> {
-  // Try to load data from storage
-  let products: Product[] = [];
-  let customers: Customer[] = [];
-  let orders: Order[] = [];
-  let users: User[] = [];
-  let companySettings: CompanySettings | null = null;
-  let stockHistory: StockHistoryRecord[] = [];
-  
   try {
-    // Try to load from database first
+    // Make sure database is connected
     const dbConnected = await initPostgresConnection();
     
-    if (dbConnected) {
-      // If connected to database, load from there
-      products = await getProducts();
-      customers = await getCustomers();
-      orders = await getOrders();
-      users = await getUsers();
-      companySettings = await getCompanySettings();
-      stockHistory = await getStockHistory();
-    } else {
-      // If not connected, load from localStorage
-      const localProducts = localStorage.getItem('products');
-      const localCustomers = localStorage.getItem('customers');
-      const localOrders = localStorage.getItem('orders');
-      const localUsers = localStorage.getItem('users');
-      const localCompanySettings = localStorage.getItem('company_settings');
-      const localStockHistory = localStorage.getItem('stock_history');
-      
-      if (localProducts) products = JSON.parse(localProducts);
-      if (localCustomers) customers = JSON.parse(localCustomers);
-      if (localOrders) orders = JSON.parse(localOrders);
-      if (localUsers) users = JSON.parse(localUsers);
-      if (localCompanySettings) companySettings = JSON.parse(localCompanySettings);
-      if (localStockHistory) stockHistory = JSON.parse(localStockHistory);
+    if (!dbConnected) {
+      console.error("Failed to connect to database during initial data load");
+      return {
+        products: [],
+        customers: [],
+        orders: [],
+        users: [],
+        companySettings: null,
+        stockHistory: []
+      };
     }
+    
+    // Load all data from PostgreSQL
+    const products = await getProducts();
+    const customers = await getCustomers();
+    const orders = await getOrders();
+    const users = await getUsers();
+    const companySettings = await getCompanySettings();
+    const stockHistory = await getStockHistory();
+    
+    return { products, customers, orders, users, companySettings, stockHistory };
   } catch (error) {
     console.error("Error loading initial data:", error);
-    // Fallback to empty arrays if everything fails
+    // Return empty state if error occurs
+    return {
+      products: [],
+      customers: [],
+      orders: [],
+      users: [],
+      companySettings: null,
+      stockHistory: []
+    };
   }
-  
-  return { products, customers, orders, users, companySettings, stockHistory };
 }

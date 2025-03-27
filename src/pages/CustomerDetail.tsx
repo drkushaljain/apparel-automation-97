@@ -32,13 +32,24 @@ const CustomerDetail = () => {
 
   useEffect(() => {
     if (customer?.category) {
-      const savedCategories = JSON.parse(localStorage.getItem("customer_categories") || "[]");
-      const foundCategory = savedCategories.find((cat: CustomerCategory) => cat.id === customer.category);
-      if (foundCategory) {
-        setCategory(foundCategory);
-      }
+      fetchCategory(customer.category);
     }
   }, [customer]);
+
+  const fetchCategory = async (categoryId: string) => {
+    try {
+      const response = await fetch(`/api/customer-categories/${categoryId}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCategory(data);
+      } else {
+        console.error('Failed to fetch category:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error fetching category:', error);
+    }
+  };
 
   if (!customer) {
     return (

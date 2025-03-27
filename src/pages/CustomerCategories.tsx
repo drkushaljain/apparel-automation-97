@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import { useAppContext } from "@/contexts/AppContext";
@@ -28,12 +27,13 @@ import { CustomerCategory } from "@/types";
 import { ArrowLeft, Plus, Trash2, Edit } from "lucide-react";
 import { toast } from "sonner";
 
+const API_BASE_URL = '/api/customer-categories';
+
 const CustomerCategories = () => {
   const navigate = useNavigate();
   const { state, dispatch } = useAppContext();
-  const [categories, setCategories] = useState<CustomerCategory[]>(
-    JSON.parse(localStorage.getItem("customer_categories") || "[]")
-  );
+  const [categories, setCategories] = useState<CustomerCategory[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -41,60 +41,124 @@ const CustomerCategories = () => {
   const [categoryDescription, setCategoryDescription] = useState("");
   const [editingCategory, setEditingCategory] = useState<CustomerCategory | null>(null);
 
-  const handleAddCategory = () => {
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(API_BASE_URL);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(data);
+      } else {
+        console.error('Failed to fetch categories:', response.statusText);
+        toast.error("Failed to load customer categories");
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      toast.error("Could not connect to the server");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddCategory = async () => {
     if (!categoryName.trim()) {
       toast.error("Category name is required");
       return;
     }
 
-    const newCategory: CustomerCategory = {
-      id: `cat_${Date.now()}`,
-      name: categoryName.trim(),
-      description: categoryDescription.trim() || undefined,
-    };
+    try {
+      const newCategory: Omit<CustomerCategory, 'id'> = {
+        name: categoryName.trim(),
+        description: categoryDescription.trim() || undefined,
+      };
 
-    const updatedCategories = [...categories, newCategory];
-    setCategories(updatedCategories);
-    localStorage.setItem("customer_categories", JSON.stringify(updatedCategories));
-    
-    setCategoryName("");
-    setCategoryDescription("");
-    setIsAddDialogOpen(false);
-    toast.success("Category added successfully");
+      const response = await fetch(API_BASE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newCategory),
+      });
+
+      if (response.ok) {
+        const createdCategory = await response.json();
+        setCategories([...categories, createdCategory]);
+        setCategoryName("");
+        setCategoryDescription("");
+        setIsAddDialogOpen(false);
+        toast.success("Category added successfully");
+      } else {
+        toast.error("Failed to add category");
+      }
+    } catch (error) {
+      console.error('Error adding category:', error);
+      toast.error("Could not connect to the server");
+    }
   };
 
-  const handleEditCategory = () => {
+  const handleEditCategory = async () => {
     if (!editingCategory || !categoryName.trim()) {
       toast.error("Category name is required");
       return;
     }
 
-    const updatedCategories = categories.map(cat => 
-      cat.id === editingCategory.id 
-        ? { 
-            ...cat, 
-            name: categoryName.trim(), 
-            description: categoryDescription.trim() || undefined 
-          } 
-        : cat
-    );
-    
-    setCategories(updatedCategories);
-    localStorage.setItem("customer_categories", JSON.stringify(updatedCategories));
-    
-    setCategoryName("");
-    setCategoryDescription("");
-    setEditingCategory(null);
-    setIsEditDialogOpen(false);
-    toast.success("Category updated successfully");
+    try {
+      const updatedCategory = {
+        ...editingCategory,
+        name: categoryName.trim(),
+        description: categoryDescription.trim() || undefined
+      };
+
+      const response = await fetch(`${API_BASE_URL}/${editingCategory.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedCategory),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setCategories(categories.map(cat => 
+          cat.id === editingCategory.id ? result : cat
+        ));
+        
+        setCategoryName("");
+        setCategoryDescription("");
+        setEditingCategory(null);
+        setIsEditDialogOpen(false);
+        toast.success("Category updated successfully");
+      } else {
+        toast.error("Failed to update category");
+      }
+    } catch (error) {
+      console.error('Error updating category:', error);
+      toast.error("Could not connect to the server");
+    }
   };
 
-  const handleDeleteCategory = (categoryId: string) => {
+  const handleDeleteCategory = async (categoryId: string) => {
     if (confirm("Are you sure you want to delete this category?")) {
-      const updatedCategories = categories.filter(cat => cat.id !== categoryId);
-      setCategories(updatedCategories);
-      localStorage.setItem("customer_categories", JSON.stringify(updatedCategories));
-      toast.success("Category deleted successfully");
+      try {
+        const response = await fetch(`${API_BASE_URL}/${categoryId}`, {
+          method: 'DELETE',
+        });
+
+        if (response.ok) {
+          setCategories(categories.filter(cat => cat.id !== categoryId));
+          toast.success("Category deleted successfully");
+        } else {
+          toast.error("Failed to delete category");
+        }
+      } catch (error) {
+        console.error('Error deleting category:', error);
+        toast.error("Could not connect to the server");
+      }
     }
   };
 
@@ -204,13 +268,17 @@ const CustomerCategories = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {categories.length === 0 ? (
+            {isLoading ? (
+              <div className="flex justify-center py-6">
+                <p className="text-muted-foreground">Loading categories...</p>
+              </div>
+            ) : categories.length === 0 ? (
               <div className="text-center py-6">
                 <p className="text-muted-foreground">No categories found. Add your first category to get started.</p>
               </div>
             ) : (
               <div className="space-y-2">
-                {categories.map((category, index) => (
+                {categories.map((category) => (
                   <div key={category.id} className="flex items-center justify-between p-3 rounded-lg border">
                     <div>
                       <h3 className="font-medium">{category.name}</h3>
