@@ -25,6 +25,7 @@ import CustomerCategories from "@/pages/CustomerCategories";
 import Index from "@/pages/Index";
 import RevenueReport from "@/pages/RevenueReport";
 import EditCustomer from "@/pages/EditCustomer";
+import MarketingCampaigns from "@/pages/MarketingCampaigns";
 
 function App() {
   return (
@@ -50,6 +51,7 @@ function App() {
       <Route path="/company-settings" element={<MainLayout><CompanySettings /></MainLayout>} />
       <Route path="/customer-categories" element={<MainLayout><CustomerCategories /></MainLayout>} />
       <Route path="/reports/revenue" element={<MainLayout><RevenueReport /></MainLayout>} />
+      <Route path="/marketing" element={<MainLayout><MarketingCampaigns /></MainLayout>} />
     </Routes>
   );
 }
