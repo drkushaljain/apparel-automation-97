@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Order, CompanySettings } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { Printer, ArrowLeft } from "lucide-react";
+import { useAppContext } from "@/contexts/AppContext";
 
 interface DeliverySlipProps {
   order: Order;
@@ -13,6 +14,9 @@ interface DeliverySlipProps {
 }
 
 const DeliverySlip: React.FC<DeliverySlipProps> = ({ order, onClose, companySettings }) => {
+  const { state } = useAppContext();
+  const settings = companySettings || state.companySettings;
+
   const printSlip = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -48,11 +52,11 @@ const DeliverySlip: React.FC<DeliverySlipProps> = ({ order, onClose, companySett
             ${printContent.innerHTML}
             <div class="footer">
               <p>Thank you for your business!</p>
-              <p>${companySettings?.companyName || 'Apparel Management System'} - ${new Date().toLocaleDateString()}</p>
+              <p>${settings?.companyName || 'Apparel Management System'} - ${new Date().toLocaleDateString()}</p>
             </div>
           </div>
           <script>
-            window.onload = function() { window.print(); window.close(); };
+            window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); };
           </script>
         </body>
       </html>
@@ -76,9 +80,9 @@ const DeliverySlip: React.FC<DeliverySlipProps> = ({ order, onClose, companySett
         <CardContent className="p-6" id="delivery-slip">
           <div className="flex justify-between items-start mb-8">
             <div className="logo-container" style={{ width: '120px', height: '80px', display: 'flex', alignItems: 'center' }}>
-              {companySettings?.logoUrl ? (
+              {settings?.logoUrl ? (
                 <img 
-                  src={companySettings.logoUrl} 
+                  src={settings.logoUrl} 
                   alt="Company Logo" 
                   className="logo"
                   style={{ 
@@ -88,16 +92,16 @@ const DeliverySlip: React.FC<DeliverySlipProps> = ({ order, onClose, companySett
                   }} 
                 />
               ) : (
-                <div className="text-lg font-bold">{companySettings?.companyName || 'Apparel Management System'}</div>
+                <div className="text-lg font-bold">{settings?.companyName || 'Apparel Management System'}</div>
               )}
             </div>
             
             <div className="company-info text-right">
-              <h3 className="text-lg font-bold">{companySettings?.companyName || 'Apparel Management System'}</h3>
-              <p className="text-sm text-gray-600">{companySettings?.address || '123 Business Street'}</p>
-              <p className="text-sm text-gray-600">{companySettings?.phone || '+91 9876543210'}</p>
-              <p className="text-sm text-gray-600">{companySettings?.email || 'contact@example.com'}</p>
-              {companySettings?.taxId && <p className="text-sm text-gray-600">TAX ID: {companySettings.taxId}</p>}
+              <h3 className="text-lg font-bold">{settings?.companyName || 'Apparel Management System'}</h3>
+              <p className="text-sm text-gray-600">{settings?.address || '123 Business Street'}</p>
+              <p className="text-sm text-gray-600">{settings?.phone || '+91 9876543210'}</p>
+              <p className="text-sm text-gray-600">{settings?.email || 'contact@example.com'}</p>
+              {settings?.taxId && <p className="text-sm text-gray-600">TAX ID: {settings.taxId}</p>}
             </div>
           </div>
           
