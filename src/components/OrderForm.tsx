@@ -11,6 +11,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { TrashIcon, Plus, X, ChevronDown, Percent, IndianRupee } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ensureCurrencyPrecision } from "@/lib/utils";
 
 interface OrderFormProps {
   initialData?: Order;
@@ -21,6 +23,7 @@ interface OrderFormProps {
 const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
   const { state } = useAppContext();
   const { products, customers } = state;
+  const isMobile = useIsMobile();
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(initialData?.customerId || "");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -59,15 +62,15 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
     let taxSum = 0;
     
     items.forEach(item => {
-      const itemSubtotal = item.price * item.quantity;
-      const itemDiscount = item.discount || 0;
-      subTotal += itemSubtotal;
-      discountSum += itemDiscount;
+      const itemSubtotal = ensureCurrencyPrecision(item.price * item.quantity);
+      const itemDiscount = ensureCurrencyPrecision(item.discount || 0);
+      subTotal = ensureCurrencyPrecision(subTotal + itemSubtotal);
+      discountSum = ensureCurrencyPrecision(discountSum + itemDiscount);
       
       if (applyTax && item.product.taxPercentage) {
-        const taxableAmount = itemSubtotal - itemDiscount;
-        const taxAmount = (taxableAmount * item.product.taxPercentage) / 100;
-        taxSum += taxAmount;
+        const taxableAmount = ensureCurrencyPrecision(itemSubtotal - itemDiscount);
+        const taxAmount = ensureCurrencyPrecision((taxableAmount * item.product.taxPercentage) / 100);
+        taxSum = ensureCurrencyPrecision(taxSum + taxAmount);
         
         item.taxAmount = taxAmount;
       } else {
@@ -78,7 +81,7 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
     setSubtotal(subTotal);
     setDiscountTotal(discountSum);
     setTaxTotal(taxSum);
-    setTotalAmount(subTotal - discountSum + taxSum);
+    setTotalAmount(ensureCurrencyPrecision(subTotal - discountSum + taxSum));
   }, [items, applyTax]);
 
   const handleAddItem = () => {
@@ -100,7 +103,8 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
       quantity: 1,
       price: availableProduct.price,
       discount: 0,
-      taxAmount: applyTax && availableProduct.taxPercentage ? (availableProduct.price * availableProduct.taxPercentage) / 100 : 0
+      taxAmount: applyTax && availableProduct.taxPercentage ? 
+        ensureCurrencyPrecision((availableProduct.price * availableProduct.taxPercentage) / 100) : 0
     };
     
     setItems([...items, newItem]);
@@ -131,7 +135,8 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
       quantity,
       price: product.price,
       discount: 0,
-      taxAmount: applyTax && product.taxPercentage ? (product.price * product.taxPercentage) / 100 : 0
+      taxAmount: applyTax && product.taxPercentage ? 
+        ensureCurrencyPrecision((product.price * product.taxPercentage) / 100) : 0
     };
     
     setItems(newItems);
@@ -185,7 +190,7 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
     if (discountValue < 0) return;
     
     const item = items[index];
-    const itemTotal = item.price * item.quantity;
+    const itemTotal = ensureCurrencyPrecision(item.price * item.quantity);
     
     if (discountValue > itemTotal) {
       toast.error("Discount cannot exceed item total");
@@ -195,7 +200,7 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
     const newItems = [...items];
     newItems[index] = {
       ...newItems[index],
-      discount: discountValue
+      discount: ensureCurrencyPrecision(discountValue)
     };
     
     setItems(newItems);
@@ -263,13 +268,170 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
     setIsLoading(false);
   };
 
+  // Render mobile-specific item layout
+  const renderMobileItem = (item: Omit<OrderItem, 'id'>, index: number) => (
+    <div key={index} className="border rounded-md p-3 mb-3 space-y-3">
+      <div className="flex justify-between items-center">
+        <div className="font-medium flex-1 overflow-hidden">
+          <Select
+            value={item.productId}
+            onValueChange={(value) => handleProductChange(index, value)}
+          >
+            <SelectTrigger className="text-sm h-auto py-2">
+              <SelectValue placeholder="Select a product" />
+            </SelectTrigger>
+            <SelectContent>
+              {products.map(product => (
+                <SelectItem 
+                  key={product.id} 
+                  value={product.id}
+                  disabled={!product.isAvailable || product.stock === 0}
+                >
+                  <div className="truncate max-w-[240px]">
+                    {product.name} - ₹{product.price} (Stock: {product.stock})
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 ml-2 flex-shrink-0"
+          onClick={() => handleRemoveItem(index)}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      
+      {stockErrors[`item-${index}`] && (
+        <p className="text-xs text-red-500">{stockErrors[`item-${index}`]}</p>
+      )}
+      
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label htmlFor={`quantity-${index}`} className="text-xs">Quantity</Label>
+          <Input
+            id={`quantity-${index}`}
+            type="number"
+            min="1"
+            max={item.product.stock}
+            value={item.quantity}
+            onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
+            className="text-center h-9"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`discount-${index}`} className="text-xs">Discount (₹)</Label>
+          <Input
+            id={`discount-${index}`}
+            type="number"
+            min="0"
+            step="0.01"
+            value={item.discount || 0}
+            onChange={(e) => handleDiscountChange(index, parseFloat(e.target.value) || 0)}
+            className="text-center h-9"
+            placeholder="0.00"
+          />
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div>
+          <span className="text-muted-foreground">Price:</span>
+          <span className="ml-1 font-medium">₹{item.price}</span>
+          {item.product.taxPercentage && applyTax ? (
+            <span className="block text-xs text-muted-foreground mt-1">+{item.product.taxPercentage}% tax</span>
+          ) : null}
+        </div>
+        <div className="text-right">
+          <span className="text-muted-foreground">Total:</span>
+          <span className="ml-1 font-medium">₹{ensureCurrencyPrecision((item.price * item.quantity) - (item.discount || 0))}</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render desktop-specific item layout  
+  const renderDesktopItem = (item: Omit<OrderItem, 'id'>, index: number) => (
+    <div key={index} className="grid grid-cols-12 gap-2 items-center p-3 border rounded-md">
+      <div className="col-span-4">
+        <Select
+          value={item.productId}
+          onValueChange={(value) => handleProductChange(index, value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a product" />
+          </SelectTrigger>
+          <SelectContent>
+            {products.map(product => (
+              <SelectItem 
+                key={product.id} 
+                value={product.id}
+                disabled={!product.isAvailable || product.stock === 0}
+              >
+                {product.name} - ₹{product.price} (Stock: {product.stock})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {stockErrors[`item-${index}`] && (
+          <p className="text-xs text-red-500 mt-1">{stockErrors[`item-${index}`]}</p>
+        )}
+      </div>
+      <div className="col-span-2">
+        <Input
+          type="number"
+          min="1"
+          max={item.product.stock}
+          value={item.quantity}
+          onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
+          className="text-center"
+        />
+      </div>
+      <div className="col-span-2 text-center">
+        <p>₹{item.price}</p>
+        {item.product.taxPercentage && applyTax ? (
+          <p className="text-xs text-muted-foreground">+{item.product.taxPercentage}% tax</p>
+        ) : null}
+      </div>
+      <div className="col-span-2">
+        <Input
+          type="number"
+          min="0"
+          step="0.01"
+          value={item.discount || 0}
+          onChange={(e) => handleDiscountChange(index, parseFloat(e.target.value) || 0)}
+          className="text-center"
+          placeholder="0.00"
+        />
+      </div>
+      <div className="col-span-1 text-right">
+        <p>₹{ensureCurrencyPrecision((item.price * item.quantity) - (item.discount || 0))}</p>
+      </div>
+      <div className="col-span-1 text-right">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9"
+          onClick={() => handleRemoveItem(index)}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in">
       <Card>
         <CardHeader>
           <CardTitle>{initialData ? 'Edit Order' : 'New Order'}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6 max-h-[calc(100vh-20rem)] overflow-y-auto">
+        <CardContent className="space-y-6 max-h-[calc(100vh-20rem)] overflow-y-auto pb-20 md:pb-4">
           <div className="space-y-2">
             <Label htmlFor="customer">Customer</Label>
             <Select
@@ -338,83 +500,19 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="grid grid-cols-12 gap-2 text-sm text-muted-foreground px-3">
-                  <div className="col-span-4">Product</div>
-                  <div className="col-span-2 text-center">Quantity</div>
-                  <div className="col-span-2 text-center">Price</div>
-                  <div className="col-span-2 text-center">Discount</div>
-                  <div className="col-span-1 text-right">Total</div>
-                  <div className="col-span-1"></div>
-                </div>
+                {!isMobile && (
+                  <div className="grid grid-cols-12 gap-2 text-sm text-muted-foreground px-3 hidden md:grid">
+                    <div className="col-span-4">Product</div>
+                    <div className="col-span-2 text-center">Quantity</div>
+                    <div className="col-span-2 text-center">Price</div>
+                    <div className="col-span-2 text-center">Discount</div>
+                    <div className="col-span-1 text-right">Total</div>
+                    <div className="col-span-1"></div>
+                  </div>
+                )}
                 
                 {items.map((item, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-2 items-center p-3 border rounded-md">
-                    <div className="col-span-4">
-                      <Select
-                        value={item.productId}
-                        onValueChange={(value) => handleProductChange(index, value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a product" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {products.map(product => (
-                            <SelectItem 
-                              key={product.id} 
-                              value={product.id}
-                              disabled={!product.isAvailable || product.stock === 0}
-                            >
-                              {product.name} - ₹{product.price} (Stock: {product.stock})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {stockErrors[`item-${index}`] && (
-                        <p className="text-xs text-red-500 mt-1">{stockErrors[`item-${index}`]}</p>
-                      )}
-                    </div>
-                    <div className="col-span-2">
-                      <Input
-                        type="number"
-                        min="1"
-                        max={item.product.stock}
-                        value={item.quantity}
-                        onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
-                        className="text-center"
-                      />
-                    </div>
-                    <div className="col-span-2 text-center">
-                      <p>₹{item.price}</p>
-                      {item.product.taxPercentage && applyTax ? (
-                        <p className="text-xs text-muted-foreground">+{item.product.taxPercentage}% tax</p>
-                      ) : null}
-                    </div>
-                    <div className="col-span-2">
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.discount || 0}
-                        onChange={(e) => handleDiscountChange(index, parseFloat(e.target.value) || 0)}
-                        className="text-center"
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div className="col-span-1 text-right">
-                      <p>₹{(item.price * item.quantity) - (item.discount || 0)}</p>
-                    </div>
-                    <div className="col-span-1 text-right">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9"
-                        onClick={() => handleRemoveItem(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+                  isMobile ? renderMobileItem(item, index) : renderDesktopItem(item, index)
                 ))}
 
                 <Card className="bg-muted/20">
@@ -475,7 +573,7 @@ const OrderForm = ({ initialData, onSubmit, onCancel }: OrderFormProps) => {
             />
           </div>
         </CardContent>
-        <CardFooter className="flex justify-between">
+        <CardFooter className="flex justify-between sticky bottom-0 bg-card border-t p-4 mt-4">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>

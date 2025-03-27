@@ -154,6 +154,25 @@
     @apply fixed bottom-0 left-0 right-0 bg-background border-t flex justify-around items-center h-14 px-2;
     box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1);
   }
+
+  /* Mobile forms enhancement */
+  .form-field {
+    @apply mb-4;
+  }
+  
+  select, input, textarea {
+    @apply w-full text-base py-2.5 px-4;
+    -webkit-appearance: none;
+  }
+
+  /* Better touch targets */
+  button, 
+  [role="button"],
+  .select-trigger,
+  input[type="checkbox"], 
+  input[type="radio"] {
+    @apply min-h-[42px] min-w-[42px];
+  }
   
   .touch-ripple {
     position: relative;

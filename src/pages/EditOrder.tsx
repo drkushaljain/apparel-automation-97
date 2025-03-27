@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Order } from "@/types";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const EditOrder = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { state, updateOrder } = useAppContext();
   const { orders } = state;
+  const isMobile = useIsMobile();
 
   const order = orders.find(o => o.id === id);
 
@@ -53,19 +55,23 @@ const EditOrder = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-6 animate-fade-in max-w-full">
+      <div className="space-y-4 animate-fade-in max-w-full pb-16 md:pb-0">
         <div className="flex items-center gap-2 sticky top-0 bg-background z-10 pb-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate(`/orders/${id}`)} className="md:flex hidden">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          {!isMobile && (
+            <Button variant="ghost" size="icon" onClick={() => navigate(`/orders/${id}`)} className="md:flex hidden">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          )}
           <h1 className="text-xl md:text-2xl font-bold tracking-tight">Edit Order {order.id}</h1>
         </div>
         
-        <OrderForm
-          initialData={order}
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-        />
+        <div className="px-0 md:px-4">
+          <OrderForm
+            initialData={order}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+          />
+        </div>
       </div>
     </MainLayout>
   );
