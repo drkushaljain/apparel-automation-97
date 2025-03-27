@@ -1,6 +1,6 @@
 
-import { Customer, Order, Product, User, CompanySettings } from '@/types';
-import { initPostgresConnection, getCustomers, getOrders, getProducts, getUsers, getCompanySettings } from '@/services/postgresService';
+import { Customer, Order, Product, User, CompanySettings, StockHistoryRecord } from '@/types';
+import { initPostgresConnection, getCustomers as postgresGetCustomers, getOrders as postgresGetOrders, getProducts as postgresGetProducts, getUsers as postgresGetUsers, getCompanySettings as postgresGetCompanySettings, getStockHistory as postgresGetStockHistory } from '@/services/postgresService';
 
 // Initialize the database
 export async function initDatabase(): Promise<boolean> {
@@ -20,6 +20,97 @@ export async function initDatabase(): Promise<boolean> {
   } catch (error) {
     console.error("Error initializing database:", error);
     return false;
+  }
+}
+
+// These functions are required by the AppContext and other components
+export async function getProducts(): Promise<Product[]> {
+  try {
+    const dbConnected = await initPostgresConnection();
+    if (dbConnected) {
+      return await postgresGetProducts();
+    } else {
+      const localProducts = localStorage.getItem('products');
+      return localProducts ? JSON.parse(localProducts) : [];
+    }
+  } catch (error) {
+    console.error("Error getting products:", error);
+    return [];
+  }
+}
+
+export async function getCustomers(): Promise<Customer[]> {
+  try {
+    const dbConnected = await initPostgresConnection();
+    if (dbConnected) {
+      return await postgresGetCustomers();
+    } else {
+      const localCustomers = localStorage.getItem('customers');
+      return localCustomers ? JSON.parse(localCustomers) : [];
+    }
+  } catch (error) {
+    console.error("Error getting customers:", error);
+    return [];
+  }
+}
+
+export async function getOrders(): Promise<Order[]> {
+  try {
+    const dbConnected = await initPostgresConnection();
+    if (dbConnected) {
+      return await postgresGetOrders();
+    } else {
+      const localOrders = localStorage.getItem('orders');
+      return localOrders ? JSON.parse(localOrders) : [];
+    }
+  } catch (error) {
+    console.error("Error getting orders:", error);
+    return [];
+  }
+}
+
+export async function getUsers(): Promise<User[]> {
+  try {
+    const dbConnected = await initPostgresConnection();
+    if (dbConnected) {
+      return await postgresGetUsers();
+    } else {
+      const localUsers = localStorage.getItem('users');
+      return localUsers ? JSON.parse(localUsers) : [];
+    }
+  } catch (error) {
+    console.error("Error getting users:", error);
+    return [];
+  }
+}
+
+export async function getCompanySettings(): Promise<CompanySettings | null> {
+  try {
+    const dbConnected = await initPostgresConnection();
+    if (dbConnected) {
+      return await postgresGetCompanySettings();
+    } else {
+      const localCompanySettings = localStorage.getItem('company_settings');
+      return localCompanySettings ? JSON.parse(localCompanySettings) : null;
+    }
+  } catch (error) {
+    console.error("Error getting company settings:", error);
+    return null;
+  }
+}
+
+export async function getStockHistory(): Promise<StockHistoryRecord[]> {
+  try {
+    const dbConnected = await initPostgresConnection();
+    if (dbConnected) {
+      return await postgresGetStockHistory();
+    } else {
+      const localStockHistory = localStorage.getItem('stock_history');
+      return localStockHistory ? JSON.parse(localStockHistory) : [];
+    }
+  } catch (error) {
+    console.error("Error getting stock history:", error);
+    return [];
   }
 }
 

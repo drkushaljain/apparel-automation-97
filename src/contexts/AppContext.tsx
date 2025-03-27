@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { Customer, Order, OrderStatus, Product, User, CompanySettings, StockHistoryRecord } from '@/types';
 import { toast } from 'sonner';
@@ -115,6 +114,7 @@ interface AppContextType {
   updateUser: (user: User) => void;
   deleteUser: (userId: string) => void;
   setCurrentUser: (user: User | null) => void;
+  login: (user: User) => void;
   setCompanySettings: (settings: CompanySettings) => void;
   updateCompanySettings: (settings: CompanySettings) => void;
   logActivity: (action: string, entityType: "order" | "product" | "customer" | "user" | "system", entityId?: string, details?: string) => void;
@@ -260,7 +260,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       
       try {
         // Initialize database connection
-        const isPostgresAvailable = await dbService.initializeDatabase();
+        const isPostgresAvailable = await dbService.initDatabase();
         
         if (!isPostgresAvailable) {
           toast.warning('Using local storage mode - database connection failed', {
@@ -510,6 +510,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     toast.success('Order deleted successfully');
   };
 
+  const login = (user: User) => {
+    dispatch({ type: 'SET_CURRENT_USER', payload: user });
+    localStorage.setItem('current_user', JSON.stringify(user));
+    logActivity('user_login', 'user', user.id, `User ${user.name} logged in`);
+  };
+
+  const setCurrentUser = (user: User | null) => {
+    dispatch({ type: 'SET_CURRENT_USER', payload: user });
+    
+    if (user) {
+      localStorage.setItem('current_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('current_user');
+    }
+  };
+
   const setCompanySettings = (settings: CompanySettings) => {
     dispatch({ type: 'SET_COMPANY_SETTINGS', payload: settings });
     toast.success('Company settings updated successfully');
@@ -549,16 +565,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } catch (error) {
       console.error("Error formatting date:", error);
       return 'Invalid Date';
-    }
-  };
-
-  const setCurrentUser = (user: User | null) => {
-    dispatch({ type: 'SET_CURRENT_USER', payload: user });
-    
-    if (user) {
-      localStorage.setItem('current_user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('current_user');
     }
   };
 
@@ -629,6 +635,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     updateUser,
     deleteUser,
     setCurrentUser,
+    login,
     setCompanySettings,
     updateCompanySettings,
     logActivity,

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
@@ -78,10 +77,6 @@ const Login = () => {
 
     // Successful login
     login(user);
-    
-    // Store current user in localStorage for persistence
-    localStorage.setItem('current_user', JSON.stringify(user));
-    
     toast.success(`Welcome back, ${user.name}!`);
     navigate("/");
     setIsLoading(false);

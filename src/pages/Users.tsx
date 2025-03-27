@@ -97,7 +97,7 @@ const Users = () => {
                       </TableCell>
                       <TableCell>
                         {user.active !== false ? (
-                          <Badge variant="success" className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
+                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
                         ) : (
                           <Badge variant="destructive" className="bg-red-100 text-red-800 hover:bg-red-100">Inactive</Badge>
                         )}
