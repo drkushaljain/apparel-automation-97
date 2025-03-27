@@ -1,13 +1,8 @@
-import express from 'express';
-import path from 'path';
-import pg from 'pg';
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-
-const { Pool } = pg;
+const express = require('express');
+const path = require('path');
+const { Pool } = require('pg');
 const app = express();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const dotenv = require('dotenv');
 
 // Load environment variables from .env file
 dotenv.config();
@@ -27,27 +22,8 @@ if (!databaseUrl) {
 // Database connection (only if DATABASE_URL is set)
 const pool = databaseUrl ? new Pool({
   connectionString: databaseUrl,
-  ssl: { rejectUnauthorized: false },
-  connectionTimeoutMillis: 5000,
-  query_timeout: 10000
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 }) : null;
-
-// Test database connection
-if (pool) {
-  try {
-    const client = await pool.connect();
-    console.log('Successfully connected to PostgreSQL');
-    client.release();
-  } catch (err) {
-    console.error('Database connection error:', err);
-  }
-}
-
-if (databaseUrl) {
-  console.log('Attempting to connect to PostgreSQL database...');
-} else {
-  console.log('No DATABASE_URL provided - running in localStorage mode');
-}
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -638,8 +614,8 @@ app.get('*', (req, res) => {
 // Use the PORT environment variable or default to 3000
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on http://0.0.0.0:${PORT}`);
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
   console.log(`Visit http://localhost:${PORT} to view the application`);
   
   // Log environment info
