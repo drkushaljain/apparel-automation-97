@@ -281,7 +281,7 @@ const Orders = () => {
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-4 md:space-y-6 animate-fade-in">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <h1 className="text-xl md:text-2xl font-bold tracking-tight">Orders</h1>
@@ -499,7 +499,7 @@ const Orders = () => {
           </CardContent>
         </Card>
       </div>
-    </MainLayout>
+    </>
   );
 };
 

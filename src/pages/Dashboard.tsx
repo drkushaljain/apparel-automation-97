@@ -175,62 +175,75 @@ const Dashboard = () => {
 
         {/* Order Status */}
         <Card className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle>Order Status</CardTitle>
-            <CardDescription>Distribution of orders by status</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col md:flex-row items-center gap-4">
-              <div className="w-full md:w-1/2 h-40 md:h-auto">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusDistribution}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={30}
-                      outerRadius={50}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {statusDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [`${value}`, 'Orders']} />
-                  </PieChart>
-                </ResponsiveContainer>
+  <CardHeader>
+    <CardTitle>Order Status</CardTitle>
+    <CardDescription>Distribution of orders by status</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <div className="flex flex-col md:flex-row items-start gap-6">
+      {/* Pie Chart */}
+      <div className="w-full md:w-1/2 h-60">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={statusDistribution}
+              cx="50%"
+              cy="50%"
+              innerRadius={30}
+              outerRadius={50}
+              paddingAngle={2}
+              dataKey="value"
+            >
+              {statusDistribution.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip formatter={(value) => [`${value}`, "Orders"]} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Status List */}
+      <div className="w-full md:w-1/2 space-y-4">
+        {statusDistribution.map((status) => {
+          const percentage = totalOrders > 0
+            ? Math.round((status.value / totalOrders) * 100)
+            : 0;
+
+          return (
+            <div key={status.name} className="flex items-center gap-3">
+              {/* Colored Circle */}
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: status.color }}
+              />
+              {/* Status Name */}
+              <span className="text-sm font-medium w-24">{status.name}</span>
+              {/* Progress Bar */}
+              <div className="flex-1 h-3 bg-muted rounded-full relative overflow-hidden">
+                <div
+                  className="absolute top-0 left-0 h-full rounded-full"
+                  style={{
+                    width: `${percentage}%`,
+                    backgroundColor: status.color,
+                  }}
+                />
               </div>
-              <div className="space-y-3 w-full md:w-1/2">
-                {statusDistribution.map((status) => (
-                  <div key={status.name} className="flex items-center">
-                    <div className="flex-1">
-                      <div className="flex items-center">
-                        <div 
-                          className="w-3 h-3 rounded-full mr-2"
-                          style={{ backgroundColor: status.color }}
-                        ></div>
-                        <span className="text-sm">{status.name}</span>
-                      </div>
-                    </div>
-                    <div className="w-full max-w-[60%]">
-                      <div className="relative h-3 w-full bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full rounded-full" 
-                          style={{ 
-                            width: `${totalOrders > 0 ? (status.value / totalOrders) * 100 : 0}%`,
-                            backgroundColor: status.color 
-                          }}
-                        ></div>
-                      </div>
-                    </div>
-                    <div className="w-8 text-right ml-2 text-sm">{status.value}</div>
-                  </div>
-                ))}
-              </div>
+              {/* Numeric Count (and optional % in parentheses) */}
+              <span className="text-sm ml-2 w-8 text-right">
+                {status.value}
+              </span>
+              {/* If you want to show the % as well: */}
+              <span className="ml-2 text-xs text-muted-foreground">
+                ({percentage}%)
+              </span> 
             </div>
-          </CardContent>
-        </Card>
+          );
+        })}
+      </div>
+    </div>
+  </CardContent>
+</Card>
 
         {/* Recent Orders */}
         <Card className="hover:shadow-md transition-shadow">

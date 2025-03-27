@@ -125,7 +125,7 @@ const Settings = () => {
   };
 
   return (
-    <MainLayout>
+    <>
       <div className="page-container space-y-4 animate-fade-in">
         <div className="page-header flex justify-between items-center">
           <h1 className="page-title">Settings</h1>
@@ -427,7 +427,7 @@ const Settings = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </MainLayout>
+    </>
   );
 };
 

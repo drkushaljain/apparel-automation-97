@@ -235,7 +235,7 @@ const MarketingCampaigns = () => {
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6 animate-fade-in">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold tracking-tight">Marketing Campaigns</h1>
@@ -515,7 +515,7 @@ const MarketingCampaigns = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </MainLayout>
+    </>
   );
 };
 

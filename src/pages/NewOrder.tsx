@@ -25,7 +25,7 @@ const NewOrder = () => {
   };
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-4 animate-fade-in max-w-full pb-16 md:pb-0">
         <div className="flex items-center gap-2 sticky top-0 bg-background z-10 pb-2">
           {!isMobile && (
@@ -43,7 +43,7 @@ const NewOrder = () => {
           />
         </div>
       </div>
-    </MainLayout>
+    </>
   );
 };
 
