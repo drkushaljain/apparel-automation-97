@@ -6,7 +6,7 @@
  * 
  * This script checks if the API server is running correctly and can connect to the database.
  * 
- * Usage: node check-api.js
+ * Usage: node check-api.js [hostname] [port]
  */
 
 const http = require('http');
@@ -18,10 +18,14 @@ const endpoints = [
   { path: '/api/validate-db', name: 'Database Validation' }
 ];
 
+// Get hostname and port from command line args if provided
+const hostname = process.argv[2] || 'localhost';
+const port = process.argv[3] || process.env.PORT || 3000;
+
 // Options for HTTP requests
 const options = {
-  hostname: 'localhost',
-  port: process.env.PORT || 3000,
+  hostname: hostname,
+  port: port,
   timeout: 5000, // 5 seconds timeout
   headers: {
     'Accept': 'application/json'
@@ -30,6 +34,8 @@ const options = {
 
 console.log('=== API Health Check ===');
 console.log(`Checking API server at http://${options.hostname}:${options.port}`);
+console.log('Environment: NODE_ENV=' + (process.env.NODE_ENV || 'not set'));
+console.log('Database URL: ' + (process.env.DATABASE_URL ? 'Set (hidden for security)' : 'NOT SET'));
 console.log('');
 
 // Check each endpoint
@@ -98,11 +104,14 @@ async function runChecks() {
   
   console.log('=== Summary ===');
   if (allSuccessful) {
-    console.log('All API endpoints are working correctly!');
+    console.log('✅ All API endpoints are working correctly!');
   } else {
-    console.log('Some API endpoints failed. Please check the server logs for more information.');
-    console.log('Make sure the server is running with the correct DATABASE_URL environment variable.');
-    console.log('Run the server with: npm start');
+    console.log('❌ Some API endpoints failed. Please check the server logs for more information.');
+    console.log('\nTroubleshooting steps:');
+    console.log('1. Make sure the server is running with: npm start');
+    console.log('2. Check if DATABASE_URL environment variable is set correctly');
+    console.log('3. Verify PostgreSQL is running and accessible');
+    console.log('4. Run setup script to initialize the database: ./setup-db.sh (Linux/Mac) or setup-db.bat (Windows)');
   }
   
   process.exit(allSuccessful ? 0 : 1);

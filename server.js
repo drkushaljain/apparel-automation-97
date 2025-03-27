@@ -1,4 +1,3 @@
-
 const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');
@@ -609,7 +608,7 @@ app.post('/api/initialize-db', async (req, res) => {
   }
 });
 
-// Create an endpoint to validate database tables
+// Add a new API endpoint to validate database tables
 app.get('/api/validate-db', async (req, res) => {
   if (!pool) {
     return res.status(503).json({ 

@@ -96,6 +96,8 @@ const fetchApi = async (url, options = {}) => {
       throw new Error('Request timeout');
     }
     throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Eye, EyeOff, LogIn, AlertCircle, LucideWifi, WifiOff, RefreshCw } from "lucide-react";
+import { Eye, EyeOff, LogIn, AlertCircle, LucideWifi, WifiOff, RefreshCw, Database } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { UserRole } from "@/types";
 import * as postgresService from "@/services/postgresService";
@@ -23,6 +23,10 @@ const Login = () => {
   const [apiError, setApiError] = useState(false);
   const [apiErrorMessage, setApiErrorMessage] = useState("");
   const [apiCheckLoading, setApiCheckLoading] = useState(true);
+  const [dbStatus, setDbStatus] = useState<{
+    connected: boolean;
+    message: string;
+  } | null>(null);
 
   const checkApiStatus = async () => {
     try {
@@ -31,10 +35,11 @@ const Login = () => {
       
       // Try connecting to database first
       const dbConnection = await postgresService.initPostgresConnection();
+      setDbStatus(dbConnection);
       
       if (dbConnection.success) {
         setApiError(false);
-        console.log("Database connection successful");
+        console.log("Database connection successful:", dbConnection.message);
       } else {
         console.error('Database connection failed:', dbConnection.message);
         setApiError(true);
@@ -188,9 +193,9 @@ const Login = () => {
           </Alert>
         ) : (
           <Alert variant="default" className="mb-4 animate-slide-up bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300">
-            <LucideWifi className="h-4 w-4" />
+            <Database className="h-4 w-4" />
             <AlertDescription>
-              Connected to server. Using database authentication.
+              Connected to server. {dbStatus?.message || 'Using database authentication.'}
             </AlertDescription>
           </Alert>
         )}

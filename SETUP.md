@@ -20,7 +20,7 @@ CREATE DATABASE apparel_management;
 
 ### 2. Set the DATABASE_URL environment variable
 
-The application requires a `DATABASE_URL` environment variable to connect to your PostgreSQL database.
+The application **requires** a `DATABASE_URL` environment variable to connect to your PostgreSQL database.
 
 #### On Windows:
 
@@ -54,7 +54,17 @@ setup-db.bat
 
 These scripts will create all the necessary tables and default data in your database.
 
-### 4. Run the application
+### 4. Verify database connection
+
+Run the check-api script to verify that your database connection is working:
+
+```bash
+node src/scripts/check-api.js
+```
+
+This will check if the API server can connect to your database and if all required tables exist.
+
+### 5. Run the application
 
 ```bash
 npm start
@@ -66,14 +76,31 @@ The application should now be running at http://localhost:3000
 
 If you're experiencing any issues with the database connection:
 
-1. Check if the `DATABASE_URL` is correctly set
-2. Make sure PostgreSQL is running
-3. Verify your database credentials
-4. Check the database schema by running the validation script:
+1. Check if the `DATABASE_URL` is correctly set:
+   ```
+   echo %DATABASE_URL%  # Windows
+   echo $DATABASE_URL   # Mac/Linux
+   ```
 
-```bash
-node src/scripts/check-api.js
-```
+2. Make sure PostgreSQL is running:
+   ```
+   pg_isready -h localhost -p 5432
+   ```
+
+3. Try connecting to the database directly:
+   ```
+   psql postgres://username:password@localhost:5432/apparel_management
+   ```
+
+4. Check the database schema by running the validation script:
+   ```
+   node src/scripts/check-api.js
+   ```
+
+5. If all else fails, initialize the database manually:
+   ```
+   psql -h localhost -U username -d apparel_management -f database/schema.sql
+   ```
 
 ## Default Login Credentials
 
