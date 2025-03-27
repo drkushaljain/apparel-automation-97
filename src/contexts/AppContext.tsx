@@ -268,48 +268,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           });
         }
         
-        // Load products
-        try {
-          const products = await dbService.getProducts();
-          dispatch({ type: 'SET_PRODUCTS', payload: products });
-        } catch (error) {
-          console.error("Error loading products:", error);
-          dispatch({ type: 'SET_PRODUCTS', payload: [] });
+        // Load initial data
+        const { products, customers, orders, users, companySettings, stockHistory } = 
+          await dbService.loadInitialData();
+
+        // Set all data in state
+        dispatch({ type: 'SET_PRODUCTS', payload: products });
+        dispatch({ type: 'SET_CUSTOMERS', payload: customers });
+        dispatch({ type: 'SET_ORDERS', payload: orders });
+
+        // Process users data
+        let updatedUsers = users;
+        if (updatedUsers.length === 0) {
+          updatedUsers = DEFAULT_USERS;
         }
         
-        // Load customers
-        try {
-          const customers = await dbService.getCustomers();
-          dispatch({ type: 'SET_CUSTOMERS', payload: customers });
-        } catch (error) {
-          console.error("Error loading customers:", error);
-          dispatch({ type: 'SET_CUSTOMERS', payload: [] });
-        }
-        
-        // Load orders
-        try {
-          const orders = await dbService.getOrders();
-          dispatch({ type: 'SET_ORDERS', payload: orders });
-        } catch (error) {
-          console.error("Error loading orders:", error);
-          dispatch({ type: 'SET_ORDERS', payload: [] });
-        }
-        
-        // Load users
-        let users: User[] = [];
-        try {
-          users = await dbService.getUsers();
-          
-          // If we get no users from the database, use default users
-          if (users.length === 0) {
-            users = DEFAULT_USERS;
-          }
-        } catch (error) {
-          console.error("Error loading users:", error);
-          users = DEFAULT_USERS;
-        }
-        
-        const updatedUsers = users.map(user => {
+        updatedUsers = updatedUsers.map(user => {
           if (!user.password) {
             return {
               ...user,
@@ -331,31 +305,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         });
         
         dispatch({ type: 'SET_USERS', payload: updatedUsers });
+        dispatch({ type: 'SET_STOCK_HISTORY', payload: stockHistory || [] });
         
-        // Load stock history
-        try {
-          const stockHistory = await dbService.getStockHistory();
-          dispatch({ type: 'SET_STOCK_HISTORY', payload: stockHistory });
-        } catch (error) {
-          console.error("Error loading stock history:", error);
-          dispatch({ type: 'SET_STOCK_HISTORY', payload: [] });
+        if (companySettings) {
+          dispatch({ type: 'SET_COMPANY_SETTINGS', payload: companySettings });
         }
         
-        // Load company settings
-        try {
-          const companySettings = await dbService.getCompanySettings();
-          if (companySettings) {
-            dispatch({ type: 'SET_COMPANY_SETTINGS', payload: companySettings });
-          }
-        } catch (error) {
-          console.error("Error loading company settings:", error);
-        }
-        
-        // Ensure a current user is set if not already and there are users available
-        if (updatedUsers.length > 0 && !state.currentUser) {
-          // Don't auto-login, let the user login explicitly
-          // dispatch({ type: 'SET_CURRENT_USER', payload: updatedUsers[0] });
-        }
       } catch (error) {
         console.error("Error loading data:", error);
         toast.error("Failed to load data from the database");

@@ -121,6 +121,7 @@ export async function loadInitialData(): Promise<{
   orders: Order[];
   users: User[];
   companySettings: CompanySettings | null;
+  stockHistory: StockHistoryRecord[];
 }> {
   // Try to load data from storage
   let products: Product[] = [];
@@ -128,6 +129,7 @@ export async function loadInitialData(): Promise<{
   let orders: Order[] = [];
   let users: User[] = [];
   let companySettings: CompanySettings | null = null;
+  let stockHistory: StockHistoryRecord[] = [];
   
   try {
     // Try to load from database first
@@ -140,6 +142,7 @@ export async function loadInitialData(): Promise<{
       orders = await getOrders();
       users = await getUsers();
       companySettings = await getCompanySettings();
+      stockHistory = await getStockHistory();
     } else {
       // If not connected, load from localStorage
       const localProducts = localStorage.getItem('products');
@@ -147,17 +150,19 @@ export async function loadInitialData(): Promise<{
       const localOrders = localStorage.getItem('orders');
       const localUsers = localStorage.getItem('users');
       const localCompanySettings = localStorage.getItem('company_settings');
+      const localStockHistory = localStorage.getItem('stock_history');
       
       if (localProducts) products = JSON.parse(localProducts);
       if (localCustomers) customers = JSON.parse(localCustomers);
       if (localOrders) orders = JSON.parse(localOrders);
       if (localUsers) users = JSON.parse(localUsers);
       if (localCompanySettings) companySettings = JSON.parse(localCompanySettings);
+      if (localStockHistory) stockHistory = JSON.parse(localStockHistory);
     }
   } catch (error) {
     console.error("Error loading initial data:", error);
     // Fallback to empty arrays if everything fails
   }
   
-  return { products, customers, orders, users, companySettings };
+  return { products, customers, orders, users, companySettings, stockHistory };
 }

@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
@@ -38,9 +39,9 @@ const Login = () => {
   };
   
   // Check database connection on component mount
-  useState(() => {
+  useEffect(() => {
     checkDbConnection();
-  });
+  }, []);
   
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
