@@ -1,16 +1,21 @@
 
-const express = require('express');
-const path = require('path');
-const dotenv = require('dotenv');
-const fs = require('fs');
-const morgan = require('morgan');
-const cors = require('cors');
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+import fs from 'fs';
+import morgan from 'morgan';
+import cors from 'cors';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Get the directory name equivalent in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Enhanced middleware setup
 app.use(cors()); // Add CORS support
@@ -54,7 +59,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Import and use the API router
-const apiRouter = require('./src/server/router');
+import apiRouter from './src/server/router.js';
 app.use('/api', apiRouter);
 
 // Global error handler

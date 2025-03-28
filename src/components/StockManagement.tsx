@@ -50,14 +50,13 @@ const StockManagement = ({ product }: StockManagementProps) => {
             </Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogDescription className="sr-only">
+            <DialogDescription id="add-stock-description" className="sr-only">
               Form to update the stock level for {product.name}
             </DialogDescription>
             <StockUpdateForm 
               product={product} 
               onSubmit={handleStockUpdate}
               onClose={() => setDialogOpen(false)}
-              mode="add"
             />
           </DialogContent>
         </Dialog>
@@ -77,14 +76,13 @@ const StockManagement = ({ product }: StockManagementProps) => {
             </Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogDescription className="sr-only">
+            <DialogDescription id="remove-stock-description" className="sr-only">
               Form to remove stock from {product.name}
             </DialogDescription>
             <StockUpdateForm 
               product={product} 
               onSubmit={(product, amount, reason) => handleStockUpdate(product, -Math.abs(amount), reason)}
               onClose={() => setDialogOpen(false)}
-              mode="remove"
             />
           </DialogContent>
         </Dialog>
