@@ -20,27 +20,30 @@ if "%PGUSER%"=="" set PGUSER=postgres
 set /p PGPASSWORD=Enter PostgreSQL password: 
 
 rem Database name
-set DB_NAME=mybiz
+set DB_NAME=mybiz2
+
+rem Port number (default is 5433 based on your connection string)
+set /p PGPORT=Enter PostgreSQL port (default: 5433): 
+if "%PGPORT%"=="" set PGPORT=5433
 
 rem Create database if it doesn't exist
 echo Creating database if it doesn't exist...
-psql -U %PGUSER% -c "SELECT 1 FROM pg_database WHERE datname = '%DB_NAME%'" | findstr /C:"1 row" >nul
+echo SELECT 'CREATE DATABASE %DB_NAME%' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '%DB_NAME%');| psql -U %PGUSER% -p %PGPORT%
+
+rem Test connection to the new database
+echo Testing connection to the database...
+psql -U %PGUSER% -p %PGPORT% -d %DB_NAME% -c "SELECT 'Connection successful!' as result;"
+
 if %ERRORLEVEL% neq 0 (
-    echo Database '%DB_NAME%' does not exist. Creating it...
-    createdb -U %PGUSER% %DB_NAME%
-    if %ERRORLEVEL% neq 0 (
-        echo Failed to create database '%DB_NAME%'
-        exit /b 1
-    ) else (
-        echo Database '%DB_NAME%' created successfully
-    )
+    echo Failed to connect to database '%DB_NAME%'
+    exit /b 1
 ) else (
-    echo Database '%DB_NAME%' already exists
+    echo Successfully connected to database '%DB_NAME%'
 )
 
 rem Update the .env file with the correct DATABASE_URL
 echo Updating .env file with database connection string...
-echo DATABASE_URL=postgresql://%PGUSER%:%PGPASSWORD%@localhost:5433/%DB_NAME%> .env
+echo DATABASE_URL=postgresql://%PGUSER%:%PGPASSWORD%@localhost:%PGPORT%/%DB_NAME%> .env
 echo PORT=8088>> .env
 echo NODE_ENV=development>> .env
 
@@ -49,8 +52,9 @@ node src/scripts/db-init.js
 
 echo.
 echo PostgreSQL setup complete!
-echo You can now run start-app.bat to start the application.
+echo You can now run start-server.bat to start the application.
 echo.
 echo Default login credentials:
 echo - Admin: admin@example.com / password
 echo - Manager: manager@example.com / password
+
