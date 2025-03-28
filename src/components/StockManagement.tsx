@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Product } from "@/types";
 import StockUpdateForm from "@/components/StockUpdateForm";
 import StockHistory from "@/components/StockHistory";
@@ -48,6 +48,9 @@ const StockManagement = ({ product }: StockManagementProps) => {
             </Button>
           </DialogTrigger>
           <DialogContent>
+            <DialogDescription className="sr-only">
+              Form to update the stock level for {product.name}
+            </DialogDescription>
             <StockUpdateForm 
               product={product} 
               onSubmit={handleStockUpdate}

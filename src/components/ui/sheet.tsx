@@ -61,6 +61,7 @@ const SheetContent = React.forwardRef<
     <SheetPrimitive.Content
       ref={ref}
       className={cn(sheetVariants({ side }), className)}
+      aria-describedby={props['aria-describedby'] || "sheet-description"}
       {...props}
     >
       {children}
@@ -118,6 +119,7 @@ const SheetDescription = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Description>
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Description
+    id="sheet-description"
     ref={ref}
     className={cn("text-sm text-muted-foreground", className)}
     {...props}
