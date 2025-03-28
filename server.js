@@ -34,6 +34,8 @@ app.use((req, res, next) => {
   if (req.method === 'POST') {
     console.log(`POST request to ${req.path}`);
     console.log('Request headers:', req.headers);
+    console.log('Request content type:', req.headers['content-type']);
+    console.log('Request body length:', req.body ? JSON.stringify(req.body).length : 0);
   }
   next();
 });
@@ -61,7 +63,8 @@ ensureDirectoriesExist();
 // Display database connection info for debugging
 console.log(`Database URL: ${process.env.DATABASE_URL ? 'Set (hidden for security)' : 'NOT SET'}`);
 if (!process.env.DATABASE_URL) {
-  console.error('WARNING: DATABASE_URL is not set in the environment');
+  console.warn('WARNING: DATABASE_URL is not set in the environment. Setting default connection string.');
+  process.env.DATABASE_URL = 'postgresql://postgres:Kushaljain_28@localhost:5432/postgres';
 }
 
 // Serve static files from the dist directory

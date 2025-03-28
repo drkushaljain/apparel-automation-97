@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
@@ -12,6 +11,8 @@ import { ArrowLeft, Upload, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ensureCurrencyPrecision } from "@/lib/utils";
 import { toast } from "sonner";
+
+const API_BASE_URL = '/api/products';
 
 const NewProduct = () => {
   const { addProduct } = useAppContext();
@@ -48,7 +49,6 @@ const NewProduct = () => {
   const clearImageSelection = () => {
     setImageFile(null);
     setImagePreview("");
-    // Reset the file input
     const fileInput = document.getElementById("image-upload") as HTMLInputElement;
     if (fileInput) fileInput.value = "";
   };
@@ -61,7 +61,6 @@ const NewProduct = () => {
       let finalImageUrl = imageUrl;
       
       if (activeTab === "upload" && imageFile) {
-        // Convert file to data URL for storage
         const reader = new FileReader();
         finalImageUrl = await new Promise<string>((resolve) => {
           reader.onload = (event) => {
@@ -82,7 +81,7 @@ const NewProduct = () => {
       const roundedPrice = ensureCurrencyPrecision(price);
       const roundedTaxPercentage = ensureCurrencyPrecision(taxPercentage);
       
-      addProduct({
+      const productData = {
         name,
         description,
         price: roundedPrice,
@@ -93,13 +92,42 @@ const NewProduct = () => {
         taxPercentage: roundedTaxPercentage,
         stock: 0,
         sales: 0
+      };
+      
+      const response = await fetch(API_BASE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(productData),
       });
       
-      toast.success("Product added successfully");
-      navigate("/products");
+      if (response.ok) {
+        const newProduct = await response.json();
+        toast.success("Product added successfully");
+        navigate("/products");
+      } else {
+        const errorText = await response.text();
+        console.error('Error from API:', errorText);
+        throw new Error('Failed to create product via API');
+      }
     } catch (error) {
       console.error("Error adding product:", error);
-      toast.error("Failed to add product");
+      addProduct({
+        name,
+        description,
+        price: ensureCurrencyPrecision(price),
+        imageUrl: imageUrl,
+        category,
+        isAvailable,
+        sku,
+        taxPercentage: ensureCurrencyPrecision(taxPercentage),
+        stock: 0,
+        sales: 0
+      });
+      
+      toast.warning("Product added to local storage (API failed)");
+      navigate("/products");
     } finally {
       setIsLoading(false);
     }

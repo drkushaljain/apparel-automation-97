@@ -1,68 +1,42 @@
 
+import dotenv from 'dotenv';
 import pkg from 'pg';
 const { Pool } = pkg;
-import dotenv from 'dotenv';
 
-// Load environment variables
+// Ensure environment variables are loaded
 dotenv.config();
 
-// Get the connection string from environment variables
-const connectionString = process.env.DATABASE_URL;
+const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:Kushaljain_28@localhost:5432/postgres';
+console.log('Testing connection to:', connectionString.replace(/:[^:@]*@/, ':****@'));
 
-console.log('Testing database connection...');
-console.log(`Using connection string: ${connectionString ? connectionString.replace(/:[^:@]*@/, ':****@') : 'undefined'}`);
-
-if (!connectionString) {
-  console.error('DATABASE_URL environment variable is not set');
-  process.exit(1);
-}
-
-// Create a new pool
 const pool = new Pool({
   connectionString,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Test the connection
 async function testConnection() {
-  let client;
   try {
-    console.log('Attempting to connect to the database...');
-    client = await pool.connect();
-    console.log('Connected to PostgreSQL database successfully!');
-    
-    // Test a simple query
+    const client = await pool.connect();
+    console.log('Successfully connected to PostgreSQL!');
     const result = await client.query('SELECT NOW()');
-    console.log('Query executed successfully. Current timestamp:', result.rows[0].now);
-    
+    console.log('Current database time:', result.rows[0].now);
+    client.release();
     return true;
   } catch (error) {
-    console.error('Database connection error:', error);
+    console.error('Failed to connect to database:', error);
     return false;
   } finally {
-    if (client) {
-      client.release();
-      console.log('Database connection released');
-    }
-    
     // Close the pool
     await pool.end();
-    console.log('Connection pool closed');
   }
 }
 
-// Run the test
 testConnection()
   .then(success => {
-    if (success) {
-      console.log('Database connection test completed successfully');
-      process.exit(0);
-    } else {
-      console.error('Database connection test failed');
-      process.exit(1);
-    }
+    console.log(success ? 'Database connection test completed successfully.' : 'Database connection test failed.');
+    process.exit(success ? 0 : 1);
   })
-  .catch(error => {
-    console.error('Unexpected error:', error);
+  .catch(err => {
+    console.error('Unexpected error during connection test:', err);
     process.exit(1);
   });

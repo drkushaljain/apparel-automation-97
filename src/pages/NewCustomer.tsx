@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
@@ -10,6 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus } from "lucide-react";
 import { CustomerCategory } from "@/types";
+import { toast } from "sonner";
+
+const API_BASE_URL = '/api/customers';
 
 const NewCustomer = () => {
   const { addCustomer } = useAppContext();
@@ -28,31 +30,67 @@ const NewCustomer = () => {
   const [categories, setCategories] = useState<CustomerCategory[]>([]);
 
   useEffect(() => {
-    // Load customer categories from localStorage
-    const savedCategories = localStorage.getItem("customer_categories");
-    if (savedCategories) {
-      setCategories(JSON.parse(savedCategories));
-    }
+    fetch('/api/customer-categories')
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        }
+        throw new Error('Failed to fetch categories');
+      })
+      .then(data => {
+        setCategories(data || []);
+      })
+      .catch(error => {
+        console.error('Error fetching categories:', error);
+        const savedCategories = localStorage.getItem("customer_categories");
+        if (savedCategories) {
+          setCategories(JSON.parse(savedCategories));
+        }
+      });
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    addCustomer({
+    const customerData = {
       name,
       email,
       phone,
-      whatsapp: whatsapp || phone, // Use phone as whatsapp if not provided
+      whatsapp: whatsapp || phone,
       address,
       city,
       state,
       pincode,
-      category: category !== "default" ? category : undefined
-    });
+      category_id: category !== "default" ? category : null
+    };
     
-    setIsLoading(false);
-    navigate("/customers");
+    try {
+      const response = await fetch(API_BASE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(customerData),
+      });
+      
+      if (response.ok) {
+        const newCustomer = await response.json();
+        toast.success("Customer added successfully!");
+        navigate("/customers");
+      } else {
+        const errorText = await response.text();
+        console.error('Error from API:', errorText);
+        throw new Error('Failed to create customer via API');
+      }
+    } catch (error) {
+      console.error('Error adding customer:', error);
+      addCustomer(customerData);
+      toast.success("Customer added to local storage (API failed)");
+      navigate("/customers");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
