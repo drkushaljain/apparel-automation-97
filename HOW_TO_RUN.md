@@ -1,108 +1,63 @@
 
-# How to Run the Apparel Management System on Windows
-
-This guide will walk you through setting up and running the Apparel Management System on Windows with PostgreSQL.
+# Apparel Management System - Setup and Run Instructions
 
 ## Prerequisites
 
-1. **Node.js** (v14 or later) - [Download from nodejs.org](https://nodejs.org/)
-2. **PostgreSQL** (v12 or later) - [Download from postgresql.org](https://postgresql.org/download/)
-3. **Git** (optional, for cloning the repository)
+1. **Node.js** - Make sure you have Node.js installed (v14.x or higher)
+2. **PostgreSQL** - Install and set up PostgreSQL database
 
-## Step-by-Step Setup Instructions
+## Setup Steps
 
-### 1. Install PostgreSQL
+### 1. Database Setup
 
-- Download and install PostgreSQL from [postgresql.org](https://postgresql.org/download/)
-- Remember the password you set for the 'postgres' user during installation
-- Make sure PostgreSQL is running (it should start automatically after installation)
-
-### 2. Setup the Database
-
-Run the setup-postgres.bat script in a command prompt:
+1. Make sure PostgreSQL is installed and running
+2. Create a new database named "mybiz" (or choose a different name)
+3. Run the database setup script:
 
 ```
 setup-postgres.bat
 ```
 
-This script will:
-- Check if PostgreSQL is installed
-- Create a database named 'mybiz'
-- Create an .env file with the correct database connection string
-- Run the database initialization script to create tables and default users
-- For port number, you may need to change the default port from 5432 to 5433 in the .env file if you use a different port
+This will:
+- Configure the database connection in .env file
+- Create necessary tables
+- Set up initial data
 
-### 3. Install Dependencies
+### 2. Starting the Server
 
-Open a command prompt in the project directory and run:
+Run the following command to start the backend server:
 
 ```
-npm install
+start-server.bat
 ```
 
-This will install all the required packages.
+The server should start on port 8088 (or whatever port is configured in .env)
 
-### 4. Start the Application
+### 3. Running the Frontend
 
-Run the start-app.bat script:
-
-```
-start-app.bat
-```
-
-This script will:
-- Build the frontend application
-- Start the backend server
-
-### 5. Access the Application
-
-Open your browser and go to:
+In a separate terminal, start the frontend development server:
 
 ```
-http://localhost:8088
+npm run dev
 ```
 
-### 6. Login Credentials
+This will start the frontend application, usually on http://localhost:3000
 
-Use the following default credentials to log in:
+## Troubleshooting Database Connection
 
-- **Admin User**:
-  - Email: admin@example.com
-  - Password: password
+If you see database connection errors:
 
-- **Manager User**:
-  - Email: manager@example.com
-  - Password: password
+1. Make sure PostgreSQL is running
+2. Check the DATABASE_URL in your .env file:
+   - Format: `postgresql://username:password@host:port/database`
+   - Example: `postgresql://postgres:password@localhost:5432/mybiz`
+3. Make sure the username and password are correct
+4. Try connecting to the database directly using `psql` to verify credentials
+5. Make sure the server is running by checking for messages in the terminal
 
-## Troubleshooting
+## Default Login Credentials
 
-### Database Connection Issues
+Once setup is complete, you can log in with:
 
-If you encounter database connection issues:
-
-1. Check that PostgreSQL is running
-2. Verify the connection details in the .env file:
-   ```
-   DATABASE_URL=postgresql://postgres:your_password@localhost:5432/mybiz
-   ```
-3. Make sure the port number matches your PostgreSQL installation (typically 5432)
-4. Run the check-api.js script to diagnose connection issues:
-   ```
-   node src/scripts/check-api.js
-   ```
-
-### Port Already in Use
-
-If port 8088 is already in use, edit the .env file and change the PORT value.
-
-## Database Structure
-
-The application uses the following tables:
-- products
-- customers
-- orders
-- users
-- company_settings
-- stock_history
-
-Each table contains relevant fields for managing the apparel business.
+- **Admin user**: admin@example.com / admin123
+- **Manager user**: manager@example.com / password

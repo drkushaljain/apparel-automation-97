@@ -1,3 +1,4 @@
+
 import { CompanySettings, Customer, Order, Product, StockHistoryRecord, User } from '@/types';
 
 const API_BASE_URL = '/api';
@@ -5,17 +6,34 @@ const API_BASE_URL = '/api';
 export const initPostgresConnection = async (): Promise<boolean> => {
   try {
     console.log("Checking database connection status...");
-    const response = await fetch(`${API_BASE_URL}/db-status`);
+    
+    // First check if the server is running by making a simple health check request
+    const healthCheck = await fetch(`${API_BASE_URL}/health`, { 
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    }).catch(() => null);
+    
+    if (!healthCheck || !healthCheck.ok) {
+      console.error("API server is not running or not responding to health checks");
+      return false;
+    }
+    
+    // Now check database status
+    const response = await fetch(`${API_BASE_URL}/db-status`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
     
     if (!response.ok) {
       console.error(`Database status check failed: ${response.status} ${response.statusText}`);
-      throw new Error(`Status ${response.status}`);
+      return false;
     }
     
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
-      console.error(`Expected JSON response but got ${contentType}`);
-      throw new Error(`Invalid content type: ${contentType}`);
+      console.error(`Expected JSON response but got ${contentType}. The API server may be running but responding with HTML instead of JSON.`);
+      console.info("This can happen if the API server is not configured correctly or if it's returning HTML error pages.");
+      return false;
     }
     
     const data = await response.json();

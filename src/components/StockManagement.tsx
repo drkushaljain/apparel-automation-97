@@ -40,7 +40,9 @@ const StockManagement = ({ product }: StockManagementProps) => {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2">
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen && dialogType === "add"} onOpenChange={(open) => {
+          if (dialogType === "add") setDialogOpen(open);
+        }}>
           <DialogTrigger asChild>
             <Button onClick={openAddDialog} variant="outline" className="gap-1">
               <Plus className="h-4 w-4" />
@@ -55,11 +57,14 @@ const StockManagement = ({ product }: StockManagementProps) => {
               product={product} 
               onSubmit={handleStockUpdate}
               onClose={() => setDialogOpen(false)}
+              mode="add"
             />
           </DialogContent>
         </Dialog>
         
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen && dialogType === "remove"} onOpenChange={(open) => {
+          if (dialogType === "remove") setDialogOpen(open);
+        }}>
           <DialogTrigger asChild>
             <Button 
               onClick={openRemoveDialog} 
@@ -71,6 +76,17 @@ const StockManagement = ({ product }: StockManagementProps) => {
               Remove Stock
             </Button>
           </DialogTrigger>
+          <DialogContent>
+            <DialogDescription className="sr-only">
+              Form to remove stock from {product.name}
+            </DialogDescription>
+            <StockUpdateForm 
+              product={product} 
+              onSubmit={(product, amount, reason) => handleStockUpdate(product, -Math.abs(amount), reason)}
+              onClose={() => setDialogOpen(false)}
+              mode="remove"
+            />
+          </DialogContent>
         </Dialog>
       </div>
       
