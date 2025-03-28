@@ -1,7 +1,7 @@
 
 import { CompanySettings, Customer, Order, Product, StockHistoryRecord, User } from '@/types';
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = 'http://localhost:8088/api';
 
 export const initPostgresConnection = async (): Promise<boolean> => {
   try {

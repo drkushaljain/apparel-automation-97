@@ -18,7 +18,7 @@ if not exist .env (
     echo WARNING: .env file not found
     echo Creating a default .env file...
     echo DATABASE_URL=postgresql://postgres:Kushaljain_28@localhost:5433/mybiz2> .env
-    echo PORT=8088>> .env
+    echo PORT=8080>> .env
     echo NODE_ENV=development>> .env
     echo.
     echo Default .env file created. Please edit it with your PostgreSQL connection details.
