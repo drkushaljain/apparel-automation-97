@@ -1,16 +1,58 @@
-const { Pool } = require('pg');
-const { ensureUploadDirectories, handleImageUpload } = require('./fileUpload');
+
+import { Pool } from 'pg';
+import { fileURLToPath } from 'url';
+import path from 'path';
+import fs from 'fs';
+
+// Get the directory name
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Basic file upload handling (simplified version)
+export const ensureUploadDirectories = () => {
+  const uploadDir = path.join(__dirname, '..', '..', 'public', 'uploads');
+  const productImagesDir = path.join(uploadDir, 'products');
+  const companyLogosDir = path.join(uploadDir, 'company');
+  
+  [uploadDir, productImagesDir, companyLogosDir].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  });
+};
+
+export const handleImageUpload = (imageData, folder) => {
+  // Check if the image is a data URL
+  if (imageData && imageData.startsWith('data:image')) {
+    const uploadDir = path.join(__dirname, '..', '..', 'public', 'uploads', folder);
+    const fileName = `${Date.now()}.png`;
+    const filePath = path.join(uploadDir, fileName);
+    
+    // Extract the base64 data
+    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    // Write the file
+    fs.writeFileSync(filePath, buffer);
+    
+    // Return the relative path to be stored in the database
+    return `/uploads/${folder}/${fileName}`;
+  }
+  
+  // If it's not a data URL, assume it's already a file path
+  return imageData;
+};
 
 // Initialize the pool
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres',
+  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/mybiz',
 });
 
 // Ensure upload directories exist when the server starts
 ensureUploadDirectories();
 
 // Database status check
-exports.checkDatabaseConnection = async () => {
+export const checkDatabaseConnection = async () => {
   try {
     const client = await pool.connect();
     client.release();
@@ -22,17 +64,17 @@ exports.checkDatabaseConnection = async () => {
 };
 
 // CUSTOMER CATEGORIES FUNCTIONS
-exports.getAllCustomerCategories = async () => {
+export const getAllCustomerCategories = async () => {
   const result = await pool.query('SELECT * FROM customer_categories ORDER BY name');
   return result.rows;
 };
 
-exports.getCustomerCategoryById = async (id) => {
+export const getCustomerCategoryById = async (id) => {
   const result = await pool.query('SELECT * FROM customer_categories WHERE id = $1', [id]);
   return result.rows[0] || null;
 };
 
-exports.createCustomerCategory = async (category) => {
+export const createCustomerCategory = async (category) => {
   const result = await pool.query(
     `INSERT INTO customer_categories (name, description) 
     VALUES ($1, $2) 
@@ -45,7 +87,7 @@ exports.createCustomerCategory = async (category) => {
   return result.rows[0];
 };
 
-exports.updateCustomerCategory = async (id, category) => {
+export const updateCustomerCategory = async (id, category) => {
   const result = await pool.query(
     `UPDATE customer_categories SET 
       name = $1, 
@@ -62,7 +104,7 @@ exports.updateCustomerCategory = async (id, category) => {
   return result.rows[0] || null;
 };
 
-exports.deleteCustomerCategory = async (id) => {
+export const deleteCustomerCategory = async (id) => {
   try {
     // Check if the category is used by any customers
     const usageCheckResult = await pool.query('SELECT COUNT(*) FROM customers WHERE category_id = $1', [id]);
@@ -84,17 +126,17 @@ exports.deleteCustomerCategory = async (id) => {
 };
 
 // PRODUCT FUNCTIONS
-const getAllProducts = async () => {
+export const getAllProducts = async () => {
   const result = await pool.query('SELECT * FROM products ORDER BY name');
   return result.rows;
 };
 
-const getProductById = async (id) => {
+export const getProductById = async (id) => {
   const result = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
   return result.rows[0] || null;
 };
 
-const createProduct = async (product) => {
+export const createProduct = async (product) => {
   // Handle image upload
   const imagePath = handleImageUpload(product.imageUrl, 'products');
   
@@ -119,7 +161,7 @@ const createProduct = async (product) => {
   return result.rows[0];
 };
 
-const updateProduct = async (id, product) => {
+export const updateProduct = async (id, product) => {
   // Handle image upload
   const imagePath = handleImageUpload(product.imageUrl, 'products');
   
@@ -154,23 +196,23 @@ const updateProduct = async (id, product) => {
   return result.rows[0] || null;
 };
 
-const deleteProduct = async (id) => {
+export const deleteProduct = async (id) => {
   const result = await pool.query('DELETE FROM products WHERE id = $1', [id]);
   return result.rowCount > 0;
 };
 
 // CUSTOMER FUNCTIONS
-const getAllCustomers = async () => {
+export const getAllCustomers = async () => {
   const result = await pool.query('SELECT * FROM customers ORDER BY name');
   return result.rows;
 };
 
-const getCustomerById = async (id) => {
+export const getCustomerById = async (id) => {
   const result = await pool.query('SELECT * FROM customers WHERE id = $1', [id]);
   return result.rows[0] || null;
 };
 
-const createCustomer = async (customer) => {
+export const createCustomer = async (customer) => {
   const result = await pool.query(
     `INSERT INTO customers (name, email, phone, whatsapp, address, city, state, pincode, category_id) 
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
@@ -190,7 +232,7 @@ const createCustomer = async (customer) => {
   return result.rows[0];
 };
 
-const updateCustomer = async (id, customer) => {
+export const updateCustomer = async (id, customer) => {
   const result = await pool.query(
     `UPDATE customers SET 
       name = $1, 
@@ -221,7 +263,7 @@ const updateCustomer = async (id, customer) => {
   return result.rows[0] || null;
 };
 
-const deleteCustomer = async (id) => {
+export const deleteCustomer = async (id) => {
   try {
     // Check if the customer has any associated orders
     const orderCheckResult = await pool.query('SELECT COUNT(*) FROM orders WHERE customer_id = $1', [id]);
@@ -243,17 +285,17 @@ const deleteCustomer = async (id) => {
 };
 
 // ORDER FUNCTIONS
-const getAllOrders = async () => {
+export const getAllOrders = async () => {
   const result = await pool.query('SELECT * FROM orders ORDER BY order_date DESC');
   return result.rows;
 };
 
-const getOrderById = async (id) => {
+export const getOrderById = async (id) => {
   const result = await pool.query('SELECT * FROM orders WHERE id = $1', [id]);
   return result.rows[0] || null;
 };
 
-const createOrder = async (order) => {
+export const createOrder = async (order) => {
   const result = await pool.query(
     `INSERT INTO orders (customer_id, order_date, status, total_amount, subtotal, tax_total, discount_total, apply_tax, transaction_id, tracking_id, tracking_url, dispatch_image, notes, shipping_address, payment_method, payment_status, created_by) 
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) 
@@ -281,7 +323,7 @@ const createOrder = async (order) => {
   return result.rows[0];
 };
 
-const updateOrder = async (id, order) => {
+export const updateOrder = async (id, order) => {
   const result = await pool.query(
     `UPDATE orders SET 
       customer_id = $1, 
@@ -326,7 +368,7 @@ const updateOrder = async (id, order) => {
   return result.rows[0] || null;
 };
 
-const updateOrderStatus = async (id, status) => {
+export const updateOrderStatus = async (id, status) => {
   const result = await pool.query(
     `UPDATE orders SET 
       status = $1,
@@ -341,23 +383,23 @@ const updateOrderStatus = async (id, status) => {
   return result.rows[0] || null;
 };
 
-const deleteOrder = async (id) => {
+export const deleteOrder = async (id) => {
   const result = await pool.query('DELETE FROM orders WHERE id = $1', [id]);
   return result.rowCount > 0;
 };
 
 // USER FUNCTIONS
-const getAllUsers = async () => {
+export const getAllUsers = async () => {
   const result = await pool.query('SELECT * FROM users ORDER BY name');
   return result.rows;
 };
 
-const getUserById = async (id) => {
+export const getUserById = async (id) => {
   const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
   return result.rows[0] || null;
 };
 
-const createUser = async (user) => {
+export const createUser = async (user) => {
   const result = await pool.query(
     `INSERT INTO users (name, email, password_hash, password, role, active, permissions, phone) 
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
@@ -376,7 +418,7 @@ const createUser = async (user) => {
   return result.rows[0];
 };
 
-const updateUser = async (id, user) => {
+export const updateUser = async (id, user) => {
   const result = await pool.query(
     `UPDATE users SET 
       name = $1, 
@@ -405,18 +447,18 @@ const updateUser = async (id, user) => {
   return result.rows[0] || null;
 };
 
-const deleteUser = async (id) => {
+export const deleteUser = async (id) => {
   const result = await pool.query('DELETE FROM users WHERE id = $1', [id]);
   return result.rowCount > 0;
 };
 
 // COMPANY SETTINGS FUNCTIONS
-const getCompanySettings = async () => {
+export const getCompanySettings = async () => {
   const result = await pool.query('SELECT * FROM company_settings WHERE id = 1');
   return result.rows[0] || null;
 };
 
-const updateCompanySettings = async (settings) => {
+export const updateCompanySettings = async (settings) => {
   // Handle logo upload
   const logoPath = handleImageUpload(settings.logo, 'company');
   
@@ -462,12 +504,12 @@ const updateCompanySettings = async (settings) => {
 };
 
 // STOCK HISTORY FUNCTIONS
-const getStockHistory = async () => {
+export const getStockHistory = async () => {
   const result = await pool.query('SELECT * FROM stock_history ORDER BY timestamp DESC');
   return result.rows;
 };
 
-const addStockHistory = async (record) => {
+export const addStockHistory = async (record) => {
   const result = await pool.query(
     `INSERT INTO stock_history (product_id, product_name, previous_stock, new_stock, change_amount, user_id, user_name, reason, updated_by) 
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
@@ -488,12 +530,12 @@ const addStockHistory = async (record) => {
 };
 
 // ACTIVITY LOGS FUNCTIONS
-const getActivityLogs = async () => {
+export const getActivityLogs = async () => {
   const result = await pool.query('SELECT * FROM activity_logs ORDER BY timestamp DESC');
   return result.rows;
 };
 
-const addActivityLog = async (log) => {
+export const addActivityLog = async (log) => {
   const result = await pool.query(
     `INSERT INTO activity_logs (user_id, user_name, action, entity_type, entity_id, details, timestamp) 
     VALUES ($1, $2, $3, $4, $5, $6, $7) 
@@ -509,40 +551,4 @@ const addActivityLog = async (log) => {
     ]
   );
   return result.rows[0];
-};
-
-module.exports = {
-  checkDatabaseConnection,
-  getAllProducts,
-  getProductById,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-  getAllCustomers,
-  getCustomerById,
-  createCustomer,
-  updateCustomer,
-  deleteCustomer,
-  getAllOrders,
-  getOrderById,
-  createOrder,
-  updateOrder,
-  updateOrderStatus,
-  deleteOrder,
-  getAllUsers,
-  getUserById,
-  createUser,
-  updateUser,
-  deleteUser,
-  getCompanySettings,
-  updateCompanySettings,
-  getStockHistory,
-  addStockHistory,
-  getActivityLogs,
-  addActivityLog,
-  getAllCustomerCategories,
-  getCustomerCategoryById,
-  createCustomerCategory,
-  updateCustomerCategory,
-  deleteCustomerCategory
 };

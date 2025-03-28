@@ -29,4 +29,18 @@ REM Start the server
 echo Starting server...
 node server.js
 
+REM Check for errors
+if %ERRORLEVEL% neq 0 (
+    echo.
+    echo ERROR: Server failed to start with exit code %ERRORLEVEL%
+    echo.
+    echo If you see an error about "require is not defined", this is because
+    echo the project is using ES Modules. All files use import/export instead of require.
+    echo.
+    echo Please check the server.js and router.js files to ensure they use ES Module syntax.
+    echo.
+    pause
+    exit /b 1
+)
+
 pause

@@ -81,6 +81,7 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`Uploads directory: ${uploadDir}`);
+  console.log(`API endpoints: http://localhost:${PORT}/api/health`);
 });
 
 // Handle unhandled promise rejections
