@@ -13,11 +13,17 @@ if %ERRORLEVEL% neq 0 (
 
 echo Creating PostgreSQL database...
 
-rem Prompt for PostgreSQL credentials
-set /p PGUSER=Enter PostgreSQL username (default: postgres): 
-if "%PGUSER%"=="" set PGUSER=postgres
+rem Use predefined credentials or prompt for PostgreSQL credentials
+set PGUSER=postgres
+set PGPASSWORD=Kushaljain_28
 
-set /p PGPASSWORD=Enter PostgreSQL password: 
+rem Allow user to override if needed
+set /p OVERRIDE=Do you want to use the default credentials (postgres/Kushaljain_28)? (Y/N): 
+if /i "%OVERRIDE%"=="N" (
+    set /p PGUSER=Enter PostgreSQL username (default: postgres): 
+    if "%PGUSER%"=="" set PGUSER=postgres
+    set /p PGPASSWORD=Enter PostgreSQL password: 
+)
 
 rem Database name
 set DB_NAME=mybiz2
@@ -57,4 +63,3 @@ echo.
 echo Default login credentials:
 echo - Admin: admin@example.com / password
 echo - Manager: manager@example.com / password
-

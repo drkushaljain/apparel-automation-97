@@ -17,7 +17,7 @@ REM Check if .env file exists
 if not exist .env (
     echo WARNING: .env file not found
     echo Creating a default .env file...
-    echo DATABASE_URL=postgresql://postgres:postgres@localhost:5433/mybiz2> .env
+    echo DATABASE_URL=postgresql://postgres:Kushaljain_28@localhost:5433/mybiz2> .env
     echo PORT=8088>> .env
     echo NODE_ENV=development>> .env
     echo.
@@ -50,7 +50,7 @@ if %ERRORLEVEL% neq 0 (
     echo.
     echo If this is a database connection error, please check:
     echo 1. PostgreSQL is running on the specified port (5433)
-    echo 2. Username and password in .env file are correct
+    echo 2. Username and password in .env file are correct (password: Kushaljain_28)
     echo 3. Database 'mybiz2' exists
     echo.
     echo You can create the database with:
