@@ -7,8 +7,12 @@ import fs from 'fs';
 import morgan from 'morgan';
 import cors from 'cors';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables first thing to ensure they're available throughout
+const envResult = dotenv.config();
+if (envResult.error) {
+  console.error('Error loading .env file:', envResult.error);
+  console.error('Some features may not work properly without environment variables.');
+}
 
 const app = express();
 const PORT = process.env.PORT || 8088;
@@ -42,6 +46,12 @@ const ensureDirectoriesExist = () => {
 };
 
 ensureDirectoriesExist();
+
+// Display database connection info for debugging
+console.log(`Database URL: ${process.env.DATABASE_URL ? 'Set (hidden for security)' : 'NOT SET'}`);
+if (!process.env.DATABASE_URL) {
+  console.error('WARNING: DATABASE_URL is not set in the environment');
+}
 
 // Serve static files from the dist directory
 app.use(express.static(path.join(__dirname, 'dist')));

@@ -1,8 +1,13 @@
+
 import pkg from 'pg';
 const { Pool } = pkg;
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
+import dotenv from 'dotenv';
+
+// Ensure environment variables are loaded
+dotenv.config();
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
@@ -43,25 +48,68 @@ export const handleImageUpload = (imageData, folder) => {
   return imageData;
 };
 
+// Parse the DATABASE_URL directly to avoid any potential issues with the connection string
+const parseConnectionString = (connectionString) => {
+  if (!connectionString) {
+    console.error('DATABASE_URL is not defined in environment variables');
+    return null;
+  }
+
+  try {
+    // Parse the connection string
+    const match = connectionString.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+    if (!match) {
+      console.error('Invalid DATABASE_URL format');
+      return null;
+    }
+
+    const [, user, password, host, port, database] = match;
+    
+    return {
+      user,
+      password,
+      host,
+      port: parseInt(port, 10),
+      database,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    };
+  } catch (error) {
+    console.error('Error parsing DATABASE_URL:', error);
+    return null;
+  }
+};
+
 // Initialize the pool with proper error handling
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
-
-// Log database connection info for debugging
-console.log(`Attempting to connect to database: ${process.env.DATABASE_URL?.replace(/:[^:@]*@/, ':****@')}`);
-
-// Add event handlers for connection issues
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle PostgreSQL client', err);
-});
+let pool;
+try {
+  console.log(`Attempting to connect to database: ${process.env.DATABASE_URL?.replace(/:[^:@]*@/, ':****@')}`);
+  
+  const connectionConfig = parseConnectionString(process.env.DATABASE_URL);
+  
+  if (connectionConfig) {
+    pool = new Pool(connectionConfig);
+    
+    // Add event handlers for connection issues
+    pool.on('error', (err) => {
+      console.error('Unexpected error on idle PostgreSQL client', err);
+    });
+  } else {
+    console.error('Failed to create database connection pool due to invalid configuration');
+  }
+} catch (error) {
+  console.error('Error initializing database pool:', error);
+}
 
 // Ensure upload directories exist when the server starts
 ensureUploadDirectories();
 
 // Database status check with better error handling
 export const checkDatabaseConnection = async () => {
+  if (!pool) {
+    console.error('Database pool not initialized');
+    return false;
+  }
+
   try {
     const client = await pool.connect();
     console.log('Successfully connected to PostgreSQL database');
