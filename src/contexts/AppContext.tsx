@@ -5,7 +5,6 @@ import * as dbService from '@/services/dbService';
 import { format } from 'date-fns';
 import { ensureCurrencyPrecision } from '@/lib/utils';
 
-// Default users for fallback
 const DEFAULT_USERS: User[] = [
   {
     id: 'u1',
@@ -274,20 +273,37 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       dispatch({ type: 'SET_LOADING', payload: true });
       
       try {
+        console.log("Attempting to connect to database...");
         const isPostgresAvailable = await dbService.initDatabase();
         
         if (!isPostgresAvailable) {
-          toast.warning('Using local storage mode - database connection failed', {
+          toast.error('Database connection failed - Please check server configuration', {
             duration: 5000
           });
+          console.error("Failed to connect to PostgreSQL database");
+        } else {
+          console.log("Database connected successfully");
         }
         
+        console.log("Loading data from database...");
         const { products, customers, orders, users, companySettings, stockHistory } = 
           await dbService.loadInitialData();
+        
+        console.log(`Loaded ${products.length} products from database`);
+        dispatch({ type: 'SET_PRODUCTS', payload: products });
+        
+        console.log(`Loaded ${customers.length} customers from database`);
+        dispatch({ type: 'SET_CUSTOMERS', payload: customers });
+        
+        console.log(`Loaded ${orders.length} orders from database`);
+        dispatch({ type: 'SET_ORDERS', payload: orders });
 
         let updatedUsers = users;
         if (updatedUsers.length === 0) {
+          console.log("No users found, using default users");
           updatedUsers = DEFAULT_USERS;
+        } else {
+          console.log(`Loaded ${users.length} users from database`);
         }
         
         updatedUsers = updatedUsers.map(user => {
@@ -312,15 +328,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         });
         
         dispatch({ type: 'SET_USERS', payload: updatedUsers });
+        
+        console.log(`Loaded ${stockHistory.length} stock history records from database`);
         dispatch({ type: 'SET_STOCK_HISTORY', payload: stockHistory || [] });
         
         if (companySettings) {
+          console.log("Loaded company settings from database");
           dispatch({ type: 'SET_COMPANY_SETTINGS', payload: companySettings });
+        } else {
+          console.log("No company settings found in database");
         }
+        
+        toast.success('Data loaded successfully from database');
         
       } catch (error) {
         console.error("Error loading data:", error);
-        toast.error("Failed to load data from the database");
+        toast.error("Failed to load data from the database. Please check server connection.");
       } finally {
         dispatch({ type: 'SET_LOADING', payload: false });
       }
