@@ -1,4 +1,3 @@
-
 import { CompanySettings, Customer, Order, Product, StockHistoryRecord, User } from '@/types';
 
 const API_BASE_URL = '/api';
@@ -147,7 +146,6 @@ export const getStockHistory = async (): Promise<StockHistoryRecord[]> => {
   }
 };
 
-// Add CRUD operations for each entity
 export const createProduct = async (product: Omit<Product, 'id'>): Promise<Product | null> => {
   try {
     console.log("Creating product via API...");
