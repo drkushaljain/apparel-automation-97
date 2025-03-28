@@ -17,7 +17,7 @@ REM Check if .env file exists
 if not exist .env (
     echo WARNING: .env file not found
     echo Creating a default .env file...
-    echo DATABASE_URL=postgresql://postgres:password@localhost:5432/mybiz> .env
+    echo DATABASE_URL=postgresql://postgres:Kushaljain_28@localhost:5433/mybiz2> .env
     echo PORT=8088>> .env
     echo NODE_ENV=development>> .env
     echo.
