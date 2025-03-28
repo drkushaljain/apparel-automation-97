@@ -24,8 +24,19 @@ const __dirname = path.dirname(__filename);
 // Enhanced middleware setup
 app.use(cors()); // Add CORS support
 app.use(morgan('dev')); // Add request logging
+
+// Make sure these middleware are properly configured for handling request body
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Log to help debug POST requests
+app.use((req, res, next) => {
+  if (req.method === 'POST') {
+    console.log(`POST request to ${req.path}`);
+    console.log('Request headers:', req.headers);
+  }
+  next();
+});
 
 // Create upload directories if they don't exist
 const uploadDir = path.join(__dirname, 'public', 'uploads');

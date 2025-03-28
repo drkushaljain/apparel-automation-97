@@ -1,102 +1,68 @@
 
-import pg from 'pg';
+import pkg from 'pg';
+const { Pool } = pkg;
 import dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config();
 
-async function testConnection() {
-  console.log('Database Connection Test');
-  console.log('=======================');
-  
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    console.error('ERROR: DATABASE_URL environment variable is not set');
-    process.exit(1);
-  }
-  
-  console.log(`Connecting to: ${connectionString.replace(/:[^:@]*@/, ':****@')}`);
-  
-  // Parse the connection string manually to validate and log parts
-  try {
-    const match = connectionString.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
-    if (match) {
-      const [, user, password, host, port, database] = match;
-      console.log(`User: ${user}`);
-      console.log(`Password: ${password ? '****' : 'Not set'}`);
-      console.log(`Host: ${host}`);
-      console.log(`Port: ${port}`);
-      console.log(`Database: ${database}`);
-    } else {
-      console.error('WARNING: Could not parse DATABASE_URL, format may be incorrect');
-    }
-  } catch (error) {
-    console.error('Error parsing connection string:', error);
-  }
+// Get the connection string from environment variables
+const connectionString = process.env.DATABASE_URL;
 
-  const { Pool } = pg;
-  
-  // Try constructing the config object manually first
+console.log('Testing database connection...');
+console.log(`Using connection string: ${connectionString ? connectionString.replace(/:[^:@]*@/, ':****@') : 'undefined'}`);
+
+if (!connectionString) {
+  console.error('DATABASE_URL environment variable is not set');
+  process.exit(1);
+}
+
+// Create a new pool
+const pool = new Pool({
+  connectionString,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+// Test the connection
+async function testConnection() {
+  let client;
   try {
-    const match = connectionString.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
-    if (match) {
-      const [, user, password, host, port, database] = match;
-      
-      const pool = new Pool({
-        user,
-        password,
-        host,
-        port: parseInt(port, 10),
-        database,
-        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-      });
-      
-      console.log('\nTesting connection with parsed config...');
-      const client = await pool.connect();
-      const result = await client.query('SELECT NOW() as current_time');
-      console.log(`✅ Connection successful! Server time: ${result.rows[0].current_time}`);
-      client.release();
-      await pool.end();
-      
-      return true;
-    }
-  } catch (error) {
-    console.error('❌ Connection failed with parsed config:', error.message);
-  }
-  
-  // Try with connection string as fallback
-  try {
-    console.log('\nTrying connection with connection string...');
-    const pool = new Pool({ connectionString });
-    const client = await pool.connect();
-    const result = await client.query('SELECT NOW() as current_time');
-    console.log(`✅ Connection successful! Server time: ${result.rows[0].current_time}`);
-    client.release();
-    await pool.end();
+    console.log('Attempting to connect to the database...');
+    client = await pool.connect();
+    console.log('Connected to PostgreSQL database successfully!');
+    
+    // Test a simple query
+    const result = await client.query('SELECT NOW()');
+    console.log('Query executed successfully. Current timestamp:', result.rows[0].now);
     
     return true;
   } catch (error) {
-    console.error('❌ Connection failed with connection string:', error.message);
-    console.error('\nPossible solutions:');
-    console.error('1. Check if PostgreSQL server is running on the specified port');
-    console.error('2. Verify username and password are correct');
-    console.error('3. Make sure the database exists');
-    console.error('4. Check if PostgreSQL is configured to accept password authentication');
-    
+    console.error('Database connection error:', error);
     return false;
+  } finally {
+    if (client) {
+      client.release();
+      console.log('Database connection released');
+    }
+    
+    // Close the pool
+    await pool.end();
+    console.log('Connection pool closed');
   }
 }
 
+// Run the test
 testConnection()
   .then(success => {
     if (success) {
-      console.log('\nDatabase connection test completed successfully.');
+      console.log('Database connection test completed successfully');
+      process.exit(0);
     } else {
-      console.error('\nDatabase connection test failed.');
+      console.error('Database connection test failed');
       process.exit(1);
     }
   })
   .catch(error => {
-    console.error('Test error:', error);
+    console.error('Unexpected error:', error);
     process.exit(1);
   });
