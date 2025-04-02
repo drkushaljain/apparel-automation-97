@@ -586,3 +586,11 @@ export const addActivityLog = async (log) => {
   );
   return result.rows[0];
 };
+
+// Add enhanced logging for API requests
+export const debugLogApiRequest = (req) => {
+  console.log(`API ${req.method} request to ${req.path}`);
+  if (req.method === 'POST' || req.method === 'PUT') {
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+  }
+};

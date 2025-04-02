@@ -1,4 +1,3 @@
-
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -29,13 +28,24 @@ app.use(morgan('dev')); // Add request logging
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Log to help debug POST requests
+// Add detailed logging middleware for POST requests
 app.use((req, res, next) => {
   if (req.method === 'POST') {
     console.log(`POST request to ${req.path}`);
     console.log('Request headers:', req.headers);
     console.log('Request content type:', req.headers['content-type']);
-    console.log('Request body length:', req.body ? JSON.stringify(req.body).length : 0);
+    
+    // More detailed logging for the body
+    if (req.body) {
+      console.log('Request body preview:', 
+        JSON.stringify(req.body).substring(0, 500) + 
+        (JSON.stringify(req.body).length > 500 ? '...' : '')
+      );
+      console.log('Request body keys:', Object.keys(req.body));
+      console.log('Request body length:', JSON.stringify(req.body).length);
+    } else {
+      console.log('Request body is empty or not parsed');
+    }
   }
   next();
 });
@@ -86,12 +96,19 @@ app.get('/api/health', (req, res) => {
 import apiRouter from './src/server/router.js';
 app.use('/api', apiRouter);
 
-// Global error handler
+// Global error handler - enhance to provide more details
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
+  console.error('Error stack:', err.stack);
+  console.error('Request path:', req.path);
+  console.error('Request method:', req.method);
+  console.error('Request body:', req.body);
+  
   res.status(500).json({ 
     error: 'Internal Server Error', 
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
+    path: req.path,
+    method: req.method
   });
 });
 
